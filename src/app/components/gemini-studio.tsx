@@ -50,7 +50,7 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
   const viewportRef = useRef<HTMLDivElement>(null);
   const [isTitlePending, startTitleTransition] = useTransition();
 
-  const isNewConversation = activeConversation && activeConversation.messages.length === 0;
+  const isNewConversation = activeConversation ? activeConversation.messages.length === 0 : false;
 
   useEffect(() => {
     setMessages(activeConversation?.messages ?? []);
@@ -69,10 +69,11 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
     setIsLoading(true);
     
     let currentConversation = activeConversation;
+    let localIsNewConversation = isNewConversation;
 
     if (!currentConversation) {
       onNewConversation();
-      // We can't get the new conversation immediately, so we handle title generation in an effect.
+      localIsNewConversation = true;
     }
 
     let fileDataUri: string | undefined = undefined;
@@ -99,7 +100,18 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
 
-    // Title generation is now handled by the useEffect below
+    if (localIsNewConversation && activeConversation) {
+        startTitleTransition(async () => {
+          try {
+            const title = await generateConversationTitle({ prompt: prompt });
+             if (activeConversation) {
+                onUpdateConversation({ ...activeConversation, title });
+            }
+          } catch (error) {
+            console.error("Failed to generate title", error);
+          }
+        });
+    }
     
     const result = await generateResponse({ prompt, model });
 
@@ -134,30 +146,8 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
     setIsLoading(false);
   };
 
-  useEffect(() => {
-    if (isNewConversation && messages.length > 0 && activeConversation) {
-      const firstPrompt = messages[0].content;
-      if (firstPrompt) {
-        startTitleTransition(async () => {
-          try {
-            const title = await generateConversationTitle({ prompt: firstPrompt });
-            if (activeConversation) {
-              onUpdateConversation({ ...activeConversation, title });
-            }
-          } catch (error) {
-            console.error("Failed to generate title", error);
-            // Optionally, revert to a default title or handle the error
-          }
-        });
-      }
-    }
-    // We only want to run this when a new conversation is detected and the first message is added.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isNewConversation, messages, activeConversation]);
-
-
   return (
-    <div className='flex flex-col h-full'>
+    <div className='flex flex-col h-screen'>
        <header className="flex items-center gap-4 p-4 border-b shrink-0">
         <SidebarTrigger className="md:hidden" />
         <h1 className="text-xl font-bold">Gemini Studie</h1>
