@@ -31,12 +31,12 @@ export function GeminiStudio() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTo({
-        top: scrollAreaRef.current.scrollHeight,
+    if (viewportRef.current) {
+      viewportRef.current.scrollTo({
+        top: viewportRef.current.scrollHeight,
         behavior: 'smooth',
       });
     }
@@ -101,7 +101,7 @@ export function GeminiStudio() {
         <ModelSelector value={model} onValueChange={(val) => setModel(val as ModelType)} />
       </CardHeader>
       <CardContent className="flex-1 overflow-hidden">
-        <ScrollArea className="h-full pr-4" ref={scrollAreaRef}>
+        <ScrollArea className="h-full pr-4" viewportRef={viewportRef}>
           <div className="space-y-4">
             {messages.length === 0 && (
                  <div className="flex h-full items-center justify-center flex-col gap-4">
