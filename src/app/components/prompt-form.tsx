@@ -17,13 +17,11 @@ import React, { useRef, useState, useEffect } from 'react';
 import Image from 'next/image';
 
 const FormSchema = z.object({
-  prompt: z.string().min(1, {
-    message: 'Prompt kan ikke være tom.',
-  }),
+  prompt: z.string(),
 });
 
 interface PromptFormProps {
-  onSubmit: (prompt: string, file?: File) => void;
+  onSubmit: (prompt: string, files: File[]) => void;
   isLoading: boolean;
 }
 
@@ -35,25 +33,27 @@ export const PromptForm = ({ onSubmit, isLoading }: PromptFormProps) => {
     },
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!selectedFile) {
-      setPreviewUrl(null);
+    if (selectedFiles.length === 0) {
+      setPreviewUrls([]);
       return;
     }
 
-    const objectUrl = URL.createObjectURL(selectedFile);
-    setPreviewUrl(objectUrl);
+    const objectUrls = selectedFiles.map(file => URL.createObjectURL(file));
+    setPreviewUrls(objectUrls);
 
     // Free memory when the component is unmounted
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [selectedFile]);
+    return () => {
+      objectUrls.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [selectedFiles]);
 
   const resetFileState = () => {
-    setSelectedFile(null);
-    setPreviewUrl(null);
+    setSelectedFiles([]);
+    setPreviewUrls([]);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -61,7 +61,11 @@ export const PromptForm = ({ onSubmit, isLoading }: PromptFormProps) => {
 
 
   function onFormSubmit(data: z.infer<typeof FormSchema>) {
-    onSubmit(data.prompt, selectedFile || undefined);
+     if (!data.prompt && selectedFiles.length === 0) {
+        form.setError("prompt", { message: "Prompt kan ikke være tom."});
+        return;
+    }
+    onSubmit(data.prompt, selectedFiles);
     form.reset();
     resetFileState();
   }
@@ -74,11 +78,23 @@ export const PromptForm = ({ onSubmit, isLoading }: PromptFormProps) => {
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
+    const files = event.target.files;
+    if (files) {
+      setSelectedFiles(Array.from(files));
     } else {
       resetFileState();
+    }
+  };
+
+   const removeFile = (indexToRemove: number) => {
+    const newFiles = selectedFiles.filter((_, index) => index !== indexToRemove);
+    setSelectedFiles(newFiles);
+    
+    // Also update the input element's files
+    if (fileInputRef.current) {
+        const dataTransfer = new DataTransfer();
+        newFiles.forEach(file => dataTransfer.items.add(file));
+        fileInputRef.current.files = dataTransfer.files;
     }
   };
 
@@ -99,6 +115,7 @@ export const PromptForm = ({ onSubmit, isLoading }: PromptFormProps) => {
             onChange={handleFileChange} 
             className="hidden" 
             accept="image/*"
+            multiple
         />
         <Button 
             type="button" 
@@ -111,25 +128,29 @@ export const PromptForm = ({ onSubmit, isLoading }: PromptFormProps) => {
           <Paperclip className="h-4 w-4" />
         </Button>
         <div className="flex-1 space-y-2">
-            {previewUrl && (
-                <div className="relative w-24 h-24">
-                    <Image
-                        src={previewUrl}
-                        alt="Forhåndsvisning"
-                        width={96}
-                        height={96}
-                        className="rounded-md object-cover w-full h-full"
-                    />
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute top-0 right-0 h-6 w-6 rounded-full bg-black/50 hover:bg-black/75 text-white"
-                        onClick={resetFileState}
-                        aria-label="Fjern billede"
-                    >
-                        <X className="h-4 w-4" />
-                    </Button>
+            {previewUrls.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                    {previewUrls.map((url, index) => (
+                        <div key={index} className="relative w-24 h-24">
+                            <Image
+                                src={url}
+                                alt={`Forhåndsvisning ${index + 1}`}
+                                width={96}
+                                height={96}
+                                className="rounded-md object-cover w-full h-full"
+                            />
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="absolute top-0 right-0 h-6 w-6 rounded-full bg-black/50 hover:bg-black/75 text-white"
+                                onClick={() => removeFile(index)}
+                                aria-label={`Fjern billede ${index + 1}`}
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    ))}
                 </div>
             )}
             <FormField
@@ -139,7 +160,7 @@ export const PromptForm = ({ onSubmit, isLoading }: PromptFormProps) => {
                 <FormItem>
                   <FormControl>
                     <Textarea
-                      placeholder={selectedFile ? `Beskriv billedet '${selectedFile.name}'...` : "Indtast din prompt her..."}
+                      placeholder={selectedFiles.length > 0 ? `Beskriv billederne...` : "Indtast din prompt her..."}
                       className="resize-none"
                       {...field}
                       onKeyDown={handleKeyDown}

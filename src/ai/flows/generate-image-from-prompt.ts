@@ -17,14 +17,16 @@ import {Part} from '@genkit-ai/googleai';
 
 const GenerateImageFromPromptInputSchema = z.object({
   promptText: z.string().describe('The text prompt to use for generating the image.'),
-  baseImage: z
-    .object({
-      dataUri: z
-        .string()
-        .describe(
-          "A base image for editing, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
-        ),
-    })
+  baseImages: z
+    .array(
+      z.object({
+        dataUri: z
+          .string()
+          .describe(
+            "A base image for editing, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+          ),
+      })
+    )
     .optional(),
 });
 export type GenerateImageFromPromptInput = z.infer<
@@ -59,13 +61,17 @@ const generateImageFromPromptFlow = ai.defineFlow(
     let promptForModel: (string | Part)[] | string;
     let config: any = {};
 
-    if (input.baseImage) {
+    if (input.baseImages && input.baseImages.length > 0) {
       // Image-to-image generation
       modelToUse = 'googleai/gemini-2.5-flash-image-preview'; // "Nano Banana"
-      promptForModel = [
-        {text: input.promptText},
-        {media: {url: input.baseImage.dataUri}},
-      ];
+      
+      const promptParts: Part[] = [{ text: input.promptText }];
+      input.baseImages.forEach(image => {
+        promptParts.push({ media: { url: image.dataUri } });
+      });
+      
+      promptForModel = promptParts;
+      
       config = {
         responseModalities: ['TEXT', 'IMAGE'],
       };

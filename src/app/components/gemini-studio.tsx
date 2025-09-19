@@ -27,7 +27,7 @@ export type Message = {
   content?: string;
   imageUrl?: string;
   prompt?: string;
-  baseImageUrl?: string;
+  baseImageUrls?: string[];
 };
 
 export interface Conversation {
@@ -58,35 +58,38 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
     }
   }, [activeConversation?.messages]);
 
-  const fileToDataUri = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
+  const filesToDataUris = (files: File[]): Promise<string[]> => {
+    const promises = files.map(file => {
+        return new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
     });
+    return Promise.all(promises);
   };
 
-  const handleSubmit = async (prompt: string, file?: File) => {
+  const handleSubmit = async (prompt: string, files: File[] = []) => {
     setIsLoading(true);
 
     let currentConv = activeConversation;
 
     try {
-        let fileDataUri: string | undefined = undefined;
-        if (file) {
-            fileDataUri = await fileToDataUri(file);
+        let filesDataUris: string[] | undefined = undefined;
+        if (files.length > 0) {
+            filesDataUris = await filesToDataUris(files);
         }
 
         const userMessage: Message = {
             role: 'user',
             content: prompt,
-            baseImageUrl: fileDataUri,
+            baseImageUrls: filesDataUris,
         };
 
         // Handle new conversation creation
         if (!currentConv) {
-            const newConv = await onNewConversation(prompt || `Billede: ${file?.name || '...'}`, userMessage);
+            const newConv = await onNewConversation(prompt || `Billede: ${files[0]?.name || '...'}`, userMessage);
             if (!newConv) {
                 throw new Error("Samtale kunne ikke oprettes.");
             }
@@ -101,16 +104,20 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
         }
 
 
-        let baseImageDataUri: string | undefined = fileDataUri;
+        let baseImageDataUris: string[] = filesDataUris || [];
 
-        if (!baseImageDataUri && model === 'Image' && currentConv.messages.length > 1) {
-            const lastImageMessage = [...currentConv.messages].reverse().find(m => m.imageUrl || m.baseImageUrl);
-            if (lastImageMessage) {
-                baseImageDataUri = lastImageMessage.imageUrl || lastImageMessage.baseImageUrl;
+        if (baseImageDataUris.length === 0 && model === 'Image' && currentConv.messages.length > 1) {
+            const lastImageMessages = [...currentConv.messages].reverse().find(m => m.imageUrl || (m.baseImageUrls && m.baseImageUrls.length > 0));
+            if (lastImageMessages) {
+                if (lastImageMessages.imageUrl) {
+                    baseImageDataUris = [lastImageMessages.imageUrl];
+                } else if (lastImageMessages.baseImageUrls) {
+                    baseImageDataUris = lastImageMessages.baseImageUrls;
+                }
             }
         }
         
-        const result = await generateResponse({ prompt, model, baseImageDataUri: baseImageDataUri || '' });
+        const result = await generateResponse({ prompt: prompt || '', model, baseImageDataUris: baseImageDataUris });
 
         if (result.error) {
             throw new Error(result.error);
@@ -149,7 +156,7 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
 
 
   return (
-    <div className='flex flex-col h-full bg-background'>
+    <div className='flex flex-col h-full bg-card'>
        <header className="flex items-center gap-4 p-4 border-b shrink-0">
         <SidebarTrigger className="md:hidden" />
         <h1 className="text-xl font-bold">Gemini Studie</h1>
@@ -166,10 +173,10 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
             )}
             {(activeConversation?.messages ?? []).map((message, index) => {
               if (message.role === 'user') {
-                return message.baseImageUrl ? (
+                return (message.baseImageUrls && message.baseImageUrls.length > 0) ? (
                     <UserImageDisplay 
                         key={index}
-                        src={message.baseImageUrl}
+                        srcs={message.baseImageUrls}
                         prompt={message.content ?? ''}
                     />
                 ) : (
@@ -202,7 +209,7 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
           </div>
         </ScrollArea>
       </div>
-      <div className="p-4 md:p-6 border-t bg-card shrink-0">
+      <div className="p-4 md:p-6 border-t bg-background shrink-0">
         <div className="max-w-3xl mx-auto">
             <ModelSelector value={model} onValueChange={(val) => setModel(val as ModelType)} />
             <div className='h-4' />
