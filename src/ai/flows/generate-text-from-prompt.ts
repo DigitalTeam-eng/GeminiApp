@@ -45,12 +45,12 @@ const generateTextFromPromptFlow = ai.defineFlow(
   async input => {
     const historyParts: Part[] = (input.history || []).map(msg => ({
       role: msg.role,
-      content: [{ text: msg.content }],
+      parts: [{ text: msg.content }],
     }));
 
     const promptForModel = [
         ...historyParts,
-        { role: 'user', content: [{ text: input.prompt }] },
+        { role: 'user', parts: [{ text: input.prompt }] },
     ];
 
 
