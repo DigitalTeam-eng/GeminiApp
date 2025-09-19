@@ -38,7 +38,7 @@ export interface Conversation {
 
 interface GeminiStudioProps {
   activeConversation: Conversation | null;
-  onNewConversation: (prompt: string) => Promise<Conversation>;
+  onNewConversation: (prompt: string, initialMessage?: Message) => Promise<Conversation | null>;
   onUpdateConversation: (conversation: Conversation) => void;
 }
 
@@ -73,6 +73,7 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
     setIsLoading(true);
   
     let currentConv = activeConversation;
+    let initialMessageForNewConv: Message | undefined = undefined;
   
     try {
       let fileDataUri: string | undefined = undefined;
@@ -87,27 +88,27 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
       };
   
       // Handle new conversation creation
-      if (!currentConv || currentConv.messages.length === 0 && !file) {
-        currentConv = await onNewConversation(prompt);
-      } else if (!currentConv && file) {
-        currentConv = await onNewConversation(prompt || `Billede: ${file.name}`);
-      }
-  
       if (!currentConv) {
-        throw new Error("Samtale kunne ikke oprettes.");
+        initialMessageForNewConv = userMessage;
+        const newConv = await onNewConversation(prompt || `Billede: ${file?.name || '...'}`, initialMessageForNewConv);
+        if (!newConv) {
+          throw new Error("Samtale kunne ikke oprettes.");
+        }
+        currentConv = newConv;
+      } else {
+        const conversationWithUserMessage = {
+          ...currentConv,
+          messages: [...currentConv.messages, userMessage]
+        };
+        onUpdateConversation(conversationWithUserMessage);
+        currentConv = conversationWithUserMessage;
       }
-  
-      const conversationWithUserMessage = {
-        ...currentConv,
-        messages: [...currentConv.messages, userMessage]
-      };
-      onUpdateConversation(conversationWithUserMessage);
   
       let baseImageDataUri: string | undefined = fileDataUri;
   
       // If no new file is uploaded for an image model, find the last image in the conversation
-      if (!baseImageDataUri && model === 'Image' && conversationWithUserMessage.messages.length > 1) {
-        const lastImageMessage = [...conversationWithUserMessage.messages].reverse().find(m => m.imageUrl || m.baseImageUrl);
+      if (!baseImageDataUri && model === 'Image' && currentConv.messages.length > 1) {
+        const lastImageMessage = [...currentConv.messages].reverse().find(m => m.imageUrl || m.baseImageUrl);
         if (lastImageMessage) {
           baseImageDataUri = lastImageMessage.imageUrl || lastImageMessage.baseImageUrl;
         }
@@ -132,11 +133,12 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
           content: result.data.response,
         };
       }
-  
-      onUpdateConversation({
-        ...conversationWithUserMessage,
-        messages: [...conversationWithUserMessage.messages, assistantMessage]
-      });
+      
+      const finalConversation = {
+        ...currentConv,
+        messages: [...currentConv.messages, assistantMessage]
+      };
+      onUpdateConversation(finalConversation);
   
     } catch (e: any) {
       toast({
@@ -144,10 +146,8 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
         title: 'Fejl',
         description: e.message || 'Der opstod en uventet fejl.',
       });
-      // Optional: Revert optimistic update
-      if (activeConversation) {
-        onUpdateConversation(activeConversation);
-      }
+      // Optional: Revert optimistic update by fetching the original state if needed
+      // For now, we'll just log the error and stop loading
     } finally {
       setIsLoading(false);
     }

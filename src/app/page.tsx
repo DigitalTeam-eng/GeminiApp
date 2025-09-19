@@ -1,7 +1,7 @@
 
 'use client';
 
-import { GeminiStudio, Conversation } from '@/app/components/gemini-studio';
+import { GeminiStudio, Conversation, Message } from '@/app/components/gemini-studio';
 import {
   Sidebar,
   SidebarContent,
@@ -16,7 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { MoreHorizontal, Plus, Trash2 } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,21 +54,34 @@ export default function Home() {
     [conversations, activeConversationId]
   );
   
-  const handleNewConversation = async (prompt: string): Promise<Conversation> => {
-    const newTitle = await generateConversationTitle({ prompt });
-    const newConversation: Conversation = {
-        id: Date.now().toString(),
-        title: newTitle,
-        messages: [],
-    };
-    setConversations(prev => [newConversation, ...prev]);
-    setActiveConversationId(newConversation.id);
-    return newConversation;
-  };
+  const handleNewConversation = useCallback(async (prompt: string, initialMessage?: Message): Promise<Conversation | null> => {
+    if (!prompt.trim()) return null;
+
+    try {
+        const newTitle = await generateConversationTitle({ prompt });
+        const newConversation: Conversation = {
+            id: Date.now().toString(),
+            title: newTitle,
+            messages: initialMessage ? [initialMessage] : [],
+        };
+        
+        setConversations(prev => [newConversation, ...prev]);
+        setActiveConversationId(newConversation.id);
+        
+        return newConversation;
+    } catch (error) {
+        console.error("Failed to create new conversation:", error);
+        return null;
+    }
+  }, []);
 
   const handleUpdateConversation = (updatedConversation: Conversation) => {
     setConversations(prev => {
-        return prev.map(c => c.id === updatedConversation.id ? updatedConversation : c)
+        const exists = prev.some(c => c.id === updatedConversation.id);
+        if (exists) {
+            return prev.map(c => c.id === updatedConversation.id ? updatedConversation : c);
+        }
+        return [updatedConversation, ...prev];
     });
   };
 

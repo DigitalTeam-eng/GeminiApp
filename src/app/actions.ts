@@ -29,7 +29,9 @@ export async function generateResponse(
 
   try {
     if (model === 'Image') {
-      const imageGenInput: GenerateImageFromPromptInput = { promptText: prompt };
+      const imageGenInput: GenerateImageFromPromptInput = { 
+        promptText: prompt,
+      };
       if (baseImageDataUri) {
         imageGenInput.baseImage = { dataUri: baseImageDataUri };
       }
