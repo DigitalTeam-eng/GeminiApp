@@ -37,7 +37,7 @@ import { Input } from '@/components/ui/input';
 
 
 const initialConversations: Conversation[] = [
-    { id: '1', title: 'Tidligere samtale 1', messages: [{role: 'user', content: 'Dette er den første besked i samtale 1.'}] },
+    { id: '1', title: 'Labrador i solnedgang', messages: [{role: 'user', content: 'Tegn en labrador i en solnedgang'}] },
     { id: '2', title: 'Tidligere samtale 2', messages: [{role: 'user', content: 'Hej med dig!'}] },
 ];
 
@@ -53,7 +53,7 @@ export default function Home() {
     [conversations, activeConversationId]
   );
   
-  const handleNewConversation = () => {
+  const handleNewConversation = async () => {
     const newConversation: Conversation = {
         id: Date.now().toString(),
         title: 'Ny Samtale',

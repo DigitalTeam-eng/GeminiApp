@@ -37,7 +37,7 @@ export interface Conversation {
 
 interface GeminiStudioProps {
   activeConversation: Conversation | null;
-  onNewConversation: () => string; // Returns new conversation ID
+  onNewConversation: () => Promise<string>;
   onUpdateConversation: (conversation: Conversation) => void;
 }
 
@@ -59,36 +59,54 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
     }
   }, [messages]);
 
+  const fileToDataUri = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleSubmit = async (prompt: string, file?: File) => {
     setIsLoading(true);
 
-    let currentConvId = activeConversation?.id;
-    const isNewConv = !currentConvId || (activeConversation && activeConversation.messages.length === 0);
-
-    // 1. Create new conversation if needed
-    if (isNewConv) {
-      currentConvId = onNewConversation();
-    }
-    
-    if (!currentConvId) {
-        toast({ variant: 'destructive', title: 'Fejl', description: 'Kunne ikke oprette eller finde samtale.' });
-        setIsLoading(false);
-        return;
-    }
+    const isNewConv = !activeConversation || activeConversation.messages.length === 0;
 
     const userMessage: Message = { role: 'user', content: prompt };
-    const newMessages: Message[] = [...messages, userMessage];
+    const currentMessages = activeConversation?.messages ?? [];
+    const newMessages: Message[] = [...currentMessages, userMessage];
 
     // Optimistically update UI with user message
     if (activeConversation) {
-        onUpdateConversation({ ...activeConversation, id: currentConvId, messages: newMessages });
+        onUpdateConversation({ ...activeConversation, messages: newMessages });
     } else {
-         onUpdateConversation({ id: currentConvId, title: 'Ny Samtale', messages: newMessages });
+        // This case should be handled by the onNewConversation logic, but as a fallback:
+        const tempConv: Conversation = { id: Date.now().toString(), title: 'Ny Samtale', messages: newMessages };
+        onUpdateConversation(tempConv);
     }
     
     try {
+        let currentConv = activeConversation;
+        // 1. Create new conversation if needed & generate title
+        if (isNewConv) {
+            const title = await generateConversationTitle({ prompt });
+            const newConvId = await onNewConversation();
+            currentConv = { id: newConvId, title, messages: newMessages };
+            onUpdateConversation(currentConv);
+        }
+
+        if (!currentConv) {
+             throw new Error('Kunne ikke finde den aktive samtale.');
+        }
+
+        let fileDataUri: string | undefined = undefined;
+        if (file) {
+            fileDataUri = await fileToDataUri(file);
+        }
+
         // 2. Generate response from AI
-        const result = await generateResponse({ prompt, model });
+        const result = await generateResponse({ prompt, model, fileDataUri });
 
         if (result.error) {
             throw new Error(result.error);
@@ -109,14 +127,7 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
         }
 
         const finalMessages = [...newMessages, assistantMessage];
-        
-        // 3. Generate title if it's a new conversation
-        if (isNewConv) {
-            const title = await generateConversationTitle({ prompt });
-            onUpdateConversation({ id: currentConvId, title, messages: finalMessages });
-        } else if (activeConversation) {
-            onUpdateConversation({ ...activeConversation, messages: finalMessages });
-        }
+        onUpdateConversation({ ...currentConv, messages: finalMessages });
 
     } catch (e: any) {
         toast({
@@ -126,7 +137,7 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
         });
         // Revert user message on error
         if (activeConversation) {
-             onUpdateConversation({ ...activeConversation, messages: messages });
+             onUpdateConversation({ ...activeConversation, messages: currentMessages });
         }
     } finally {
         setIsLoading(false);
