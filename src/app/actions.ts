@@ -1,7 +1,7 @@
 'use server';
 
 import { generateImageFromPrompt, GenerateImageFromPromptInput } from '@/ai/flows/generate-image-from-prompt';
-import { generateTextFromPrompt } from '@/ai/flows/generate-text-from-prompt';
+import { generateTextFromPrompt, GenerateTextFromPromptInput, HistoryMessage } from '@/ai/flows/generate-text-from-prompt';
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
@@ -9,6 +9,7 @@ const formSchema = z.object({
   prompt: z.string().min(1, 'Prompt kan ikke være tom.'),
   model: z.enum(['Pro', 'Flash', 'Flash-Lite', 'Image']),
   baseImageDataUris: z.array(z.string()).optional(),
+  history: z.array(z.any()).optional(), // Brug 'any' for at undgå at skulle definere skemaet her
 });
 
 type ResponseType = {
@@ -25,7 +26,7 @@ export async function generateResponse(
     return { error: 'Ugyldigt input.' };
   }
 
-  const { prompt, model, baseImageDataUris } = validatedFields.data;
+  const { prompt, model, baseImageDataUris, history } = validatedFields.data;
 
   try {
     if (model === 'Image') {
@@ -38,7 +39,11 @@ export async function generateResponse(
       const result = await generateImageFromPrompt(imageGenInput);
       return { data: result };
     } else {
-      const result = await generateTextFromPrompt({ prompt: prompt });
+      const textGenInput: GenerateTextFromPromptInput = { 
+        prompt: prompt,
+        history: (history as HistoryMessage[]) || [],
+       };
+      const result = await generateTextFromPrompt(textGenInput);
       return { data: result };
     }
   } catch (e: any) {

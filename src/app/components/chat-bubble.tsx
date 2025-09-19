@@ -29,9 +29,7 @@ export function ChatBubble({ role, content }: ChatBubbleProps) {
         )}
       >
         {role === 'assistant' ? (
-          <pre className="whitespace-pre-wrap font-body text-sm">
-            <code>{content}</code>
-          </pre>
+          <p className="whitespace-pre-wrap text-sm">{content}</p>
         ) : (
           <p className="text-sm">{content}</p>
         )}

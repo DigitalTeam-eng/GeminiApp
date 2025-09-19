@@ -10,9 +10,18 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { Part } from '@genkit-ai/googleai';
+
+
+const HistoryMessageSchema = z.object({
+  role: z.enum(['user', 'model']),
+  content: z.string(),
+});
+export type HistoryMessage = z.infer<typeof HistoryMessageSchema>;
 
 const GenerateTextFromPromptInputSchema = z.object({
   prompt: z.string().describe('The text prompt to generate a response for.'),
+  history: z.array(HistoryMessageSchema).optional().describe('The conversation history.'),
 });
 export type GenerateTextFromPromptInput = z.infer<typeof GenerateTextFromPromptInputSchema>;
 
@@ -34,8 +43,19 @@ const generateTextFromPromptFlow = ai.defineFlow(
     outputSchema: GenerateTextFromPromptOutputSchema,
   },
   async input => {
+    const historyParts: Part[] = (input.history || []).map(msg => ({
+      role: msg.role,
+      content: [{ text: msg.content }],
+    }));
+
+    const promptForModel = [
+        ...historyParts,
+        { role: 'user', content: [{ text: input.prompt }] },
+    ];
+
+
     const {text} = await ai.generate({
-        prompt: input.prompt,
+        prompt: promptForModel as any, // Cast to any to handle structure
     });
     return {response: text};
   }

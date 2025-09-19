@@ -19,6 +19,8 @@ import { ImageDisplay } from './image-display';
 import { generateResponse, generateConversationTitle } from '@/app/actions';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { UserImageDisplay } from './user-image-display';
+import type { HistoryMessage } from '@/ai/flows/generate-text-from-prompt';
+
 
 export type ModelType = 'Pro' | 'Flash' | 'Flash-Lite' | 'Image';
 
@@ -116,8 +118,16 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
                 }
             }
         }
+
+        // Prepare history for the AI model
+        const history: HistoryMessage[] = currentConv.messages
+          .slice(0, -1) // Exclude the current user message
+          .map((msg) => ({
+            role: msg.role === 'assistant' ? 'model' : 'user',
+            content: msg.content ?? '',
+          }));
         
-        const result = await generateResponse({ prompt: prompt || '', model, baseImageDataUris: baseImageDataUris });
+        const result = await generateResponse({ prompt: prompt || '', model, baseImageDataUris: baseImageDataUris, history });
 
         if (result.error) {
             throw new Error(result.error);
