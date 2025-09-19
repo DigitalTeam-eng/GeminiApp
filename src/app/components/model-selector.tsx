@@ -20,10 +20,30 @@ export function ModelSelector({ value, onValueChange }: ModelSelectorProps) {
         <SelectValue placeholder="Vælg en model" />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="Pro">Pro</SelectItem>
-        <SelectItem value="Flash">Flash</SelectItem>
-        <SelectItem value="Flash-Lite">Flash-Lite</SelectItem>
-        <SelectItem value="Image">Billede</SelectItem>
+        <SelectItem value="Pro">
+          <div>
+            <p className="font-semibold">Pro</p>
+            <p className="text-xs text-muted-foreground">Den mest avancerede model til komplekse opgaver.</p>
+          </div>
+        </SelectItem>
+        <SelectItem value="Flash">
+          <div>
+            <p className="font-semibold">Flash</p>
+            <p className="text-xs text-muted-foreground">Hurtig og effektiv til generelle formål.</p>
+          </div>
+        </SelectItem>
+        <SelectItem value="Flash-Lite">
+          <div>
+            <p className="font-semibold">Flash-Lite</p>
+            <p className="text-xs text-muted-foreground">Den letteste og hurtigste model til simple opgaver.</p>
+          </div>
+        </SelectItem>
+        <SelectItem value="Image">
+          <div>
+            <p className="font-semibold">Billede</p>
+            <p className="text-xs text-muted-foreground">Genererer billeder fra tekstbeskrivelser.</p>
+          </div>
+        </SelectItem>
       </SelectContent>
     </Select>
   );
