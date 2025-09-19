@@ -93,7 +93,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen w-full">
+    <div className="h-screen w-full flex">
       <Sidebar side="left" variant="sidebar" collapsible="offcanvas">
         <SidebarHeader>
             <div className="flex items-center gap-2">
@@ -160,7 +160,7 @@ export default function Home() {
             </div>
         </SidebarContent>
       </Sidebar>
-      <SidebarInset>
+      <SidebarInset className="flex flex-col flex-1">
         <GeminiStudio activeConversation={activeConversation} onNewConversation={handleNewConversation} />
       </SidebarInset>
 
