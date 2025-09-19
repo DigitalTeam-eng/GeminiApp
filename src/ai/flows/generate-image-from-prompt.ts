@@ -63,8 +63,8 @@ const generateImageFromPromptFlow = ai.defineFlow(
       // Image-to-image generation
       modelToUse = 'googleai/gemini-2.5-flash-image-preview'; // "Nano Banana"
       promptForModel = [
-        {media: {url: input.baseImage.dataUri}},
         {text: input.promptText},
+        {media: {url: input.baseImage.dataUri}},
       ];
       config = {
         responseModalities: ['TEXT', 'IMAGE'],
