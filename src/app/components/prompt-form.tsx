@@ -12,7 +12,8 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Send } from 'lucide-react';
+import { Loader2, Paperclip, Send } from 'lucide-react';
+import React, { useRef, useState, useImperativeHandle, forwardRef } from 'react';
 
 const FormSchema = z.object({
   prompt: z.string().min(1, {
@@ -21,21 +22,34 @@ const FormSchema = z.object({
 });
 
 interface PromptFormProps {
-  onSubmit: (prompt: string) => void;
+  onSubmit: (prompt: string, file?: File) => void;
   isLoading: boolean;
 }
 
-export function PromptForm({ onSubmit, isLoading }: PromptFormProps) {
+export const PromptForm = forwardRef<{ setPrompt: (prompt: string) => void }, PromptFormProps>(({ onSubmit, isLoading }, ref) => {
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
       prompt: '',
     },
   });
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    setPrompt(prompt: string) {
+      form.setValue('prompt', prompt);
+    }
+  }));
+
 
   function onFormSubmit(data: z.infer<typeof FormSchema>) {
-    onSubmit(data.prompt);
+    onSubmit(data.prompt, selectedFile || undefined);
     form.reset();
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+    }
   }
   
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -45,6 +59,17 @@ export function PromptForm({ onSubmit, isLoading }: PromptFormProps) {
     }
   };
 
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
+
+  const handleAttachClick = () => {
+    fileInputRef.current?.click();
+  }
+
 
   return (
     <Form {...form}>
@@ -52,6 +77,23 @@ export function PromptForm({ onSubmit, isLoading }: PromptFormProps) {
         onSubmit={form.handleSubmit(onFormSubmit)}
         className="flex w-full items-start gap-4"
       >
+        <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileChange} 
+            className="hidden" 
+            accept="image/*"
+        />
+        <Button 
+            type="button" 
+            variant="ghost"
+            size="icon" 
+            onClick={handleAttachClick} 
+            disabled={isLoading}
+            aria-label="Vedhæft fil"
+        >
+          <Paperclip className="h-4 w-4" />
+        </Button>
         <FormField
           control={form.control}
           name="prompt"
@@ -59,7 +101,7 @@ export function PromptForm({ onSubmit, isLoading }: PromptFormProps) {
             <FormItem className="flex-1">
               <FormControl>
                 <Textarea
-                  placeholder="Indtast din prompt her..."
+                  placeholder={selectedFile ? `Beskriv billedet '${selectedFile.name}'...` : "Indtast din prompt her..."}
                   className="resize-none"
                   {...field}
                   onKeyDown={handleKeyDown}
@@ -80,4 +122,6 @@ export function PromptForm({ onSubmit, isLoading }: PromptFormProps) {
       </form>
     </Form>
   );
-}
+});
+
+PromptForm.displayName = 'PromptForm';
