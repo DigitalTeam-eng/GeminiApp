@@ -1,4 +1,6 @@
-import { GeminiStudio } from '@/app/components/gemini-studio';
+'use client';
+
+import { GeminiStudio, Conversation } from '@/app/components/gemini-studio';
 import {
   Sidebar,
   SidebarContent,
@@ -8,12 +10,88 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarTrigger,
+  SidebarMenuAction,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
-import { Plus } from 'lucide-react';
+import { MoreHorizontal, Plus, Trash2 } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Input } from '@/components/ui/input';
+
+
+const initialConversations: Conversation[] = [
+    { id: '1', title: 'Tidligere samtale 1', messages: [{role: 'user', content: 'Dette er den første besked i samtale 1.'}] },
+    { id: '2', title: 'Tidligere samtale 2', messages: [{role: 'user', content: 'Hej med dig!'}] },
+];
 
 export default function Home() {
+  const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [renamingConversationId, setRenamingConversationId] = useState<string | null>(null);
+  const [newTitle, setNewTitle] = useState('');
+  const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null);
+
+  const activeConversation = useMemo(
+    () => conversations.find(c => c.id === activeConversationId) ?? null,
+    [conversations, activeConversationId]
+  );
+  
+  const handleNewConversation = () => {
+    const newConversation: Conversation = {
+        id: Date.now().toString(),
+        title: 'Ny Samtale',
+        messages: [],
+    };
+    setConversations(prev => [newConversation, ...prev]);
+    setActiveConversationId(newConversation.id);
+  };
+
+  const handleSelectConversation = (id: string) => {
+    setActiveConversationId(id);
+  };
+
+  const startRename = (conversation: Conversation) => {
+    setRenamingConversationId(conversation.id);
+    setNewTitle(conversation.title);
+  };
+
+  const handleRename = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (renamingConversationId && newTitle.trim()) {
+        setConversations(conversations.map(c => 
+            c.id === renamingConversationId ? {...c, title: newTitle.trim()} : c
+        ));
+        setRenamingConversationId(null);
+        setNewTitle('');
+    }
+  };
+
+  const handleDelete = () => {
+    if (deletingConversationId) {
+        setConversations(conversations.filter(c => c.id !== deletingConversationId));
+        if (activeConversationId === deletingConversationId) {
+            setActiveConversationId(null);
+        }
+        setDeletingConversationId(null);
+    }
+  };
+
   return (
     <div className="min-h-screen w-full">
       <Sidebar side="left" variant="sidebar" collapsible="offcanvas">
@@ -30,30 +108,76 @@ export default function Home() {
             </div>
         </SidebarHeader>
         <SidebarContent className="p-2">
-            <Button variant="outline" className='w-full justify-start'>
+            <Button variant="outline" className='w-full justify-start' onClick={handleNewConversation}>
                 <Plus className="mr-2 h-4 w-4" />
                 Ny samtale
             </Button>
             <div className='flex-1 mt-4'>
                 <p className='text-sm text-muted-foreground px-2'>Historik</p>
                 <SidebarMenu>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton tooltip="Tidligere samtale 1" isActive>
-                            Tidligere samtale 1
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                     <SidebarMenuItem>
-                        <SidebarMenuButton tooltip="Tidligere samtale 2">
-                            Tidligere samtale 2
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
+                    {conversations.map(conv => (
+                        <SidebarMenuItem key={conv.id}>
+                            {renamingConversationId === conv.id ? (
+                                <form onSubmit={handleRename} className="p-2">
+                                    <Input 
+                                        value={newTitle}
+                                        onChange={(e) => setNewTitle(e.target.value)}
+                                        onBlur={() => setRenamingConversationId(null)}
+                                        autoFocus
+                                        className="h-8"
+                                    />
+                                </form>
+                            ) : (
+                                <SidebarMenuButton 
+                                    tooltip={conv.title} 
+                                    isActive={conv.id === activeConversationId}
+                                    onClick={() => handleSelectConversation(conv.id)}
+                                >
+                                    {conv.title}
+                                </SidebarMenuButton>
+                            )}
+                            <SidebarMenuAction showOnHover>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent>
+                                        <DropdownMenuItem onClick={() => startRename(conv)}>
+                                            Omdøb
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => setDeletingConversationId(conv.id)} className="text-destructive">
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            Slet
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </SidebarMenuAction>
+                        </SidebarMenuItem>
+                    ))}
                 </SidebarMenu>
             </div>
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
-        <GeminiStudio />
+        <GeminiStudio activeConversation={activeConversation} onNewConversation={handleNewConversation} />
       </SidebarInset>
+
+      <AlertDialog open={!!deletingConversationId} onOpenChange={(open) => !open && setDeletingConversationId(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Er du sikker?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Denne handling kan ikke fortrydes. Dette vil permanent slette din samtale.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Annuller</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Slet</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

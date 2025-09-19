@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useTransition } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Card,
@@ -17,6 +17,7 @@ import { ChatBubble } from './chat-bubble';
 import { ImageDisplay } from './image-display';
 import { generateResponse } from '@/app/actions';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { generateConversationTitle } from '@/app/actions';
 
 export type ModelType = 'Pro' | 'Flash' | 'Flash-Lite' | 'Image';
 
@@ -27,13 +28,31 @@ export type Message = {
   prompt?: string;
 };
 
-export function GeminiStudio() {
+export interface Conversation {
+  id: string;
+  title: string;
+  messages: Message[];
+}
+
+interface GeminiStudioProps {
+  activeConversation: Conversation | null;
+  onNewConversation: () => void;
+}
+
+
+export function GeminiStudio({ activeConversation, onNewConversation }: GeminiStudioProps) {
   const [model, setModel] = useState<ModelType>('Pro');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const viewportRef = useRef<HTMLDivElement>(null);
+  const [isTitlePending, startTitleTransition] = useTransition();
 
+
+  useEffect(() => {
+    setMessages(activeConversation?.messages ?? []);
+  }, [activeConversation]);
+  
   useEffect(() => {
     if (viewportRef.current) {
       viewportRef.current.scrollTo({
@@ -45,6 +64,10 @@ export function GeminiStudio() {
 
   const handleSubmit = async (prompt: string, file?: File) => {
     setIsLoading(true);
+
+    if (!activeConversation) {
+        onNewConversation();
+    }
 
     let fileDataUri: string | undefined = undefined;
     if (file) {
@@ -66,7 +89,23 @@ export function GeminiStudio() {
     }
 
     const userMessage: Message = { role: 'user', content: prompt };
-    setMessages((prev) => [...prev, userMessage]);
+    
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
+
+    if (activeConversation && activeConversation.messages.length === 0) {
+        startTitleTransition(async () => {
+            try {
+                const title = await generateConversationTitle({prompt});
+                // This would be where you update the conversation title in your state management
+                // For now, we'll just log it.
+                console.log("Generated title:", title);
+            } catch (error) {
+                console.error("Failed to generate title", error);
+            }
+        });
+    }
+
 
     const result = await generateResponse({ prompt, model });
 
@@ -76,6 +115,8 @@ export function GeminiStudio() {
         title: 'Fejl',
         description: result.error,
       });
+       // Revert user message on error
+       setMessages(messages);
     } else {
       let assistantMessage: Message;
       if (model === 'Image') {
@@ -90,22 +131,24 @@ export function GeminiStudio() {
           content: result.data.response,
         };
       }
-      setMessages((prev) => [...prev, assistantMessage]);
+      const finalMessages = [...newMessages, assistantMessage];
+      setMessages(finalMessages);
+      // Here you would update the active conversation with the new messages
     }
     setIsLoading(false);
   };
 
   return (
     <div className='flex flex-col h-full'>
-       <header className="flex items-center gap-4 p-4 border-b">
+       <header className="flex items-center gap-4 p-4 border-b shrink-0">
         <SidebarTrigger className="md:hidden" />
         <h1 className="text-xl font-bold">Gemini Studie</h1>
       </header>
-      <div className='flex-1 overflow-hidden p-4 md:p-6'>
-          <ScrollArea className="h-full pr-4" viewportRef={viewportRef}>
-          <div className="space-y-4 max-w-3xl mx-auto">
+      <div className='flex-1 overflow-hidden'>
+          <ScrollArea className="h-full" viewportRef={viewportRef}>
+          <div className="space-y-4 max-w-3xl mx-auto p-4 md:p-6">
             {messages.length === 0 && (
-                 <div className="flex h-full items-center justify-center flex-col gap-4">
+                 <div className="flex h-[calc(100vh-200px)] items-center justify-center flex-col gap-4">
                     <p className="text-muted-foreground">
                         Indtast en prompt nedenfor for at starte samtalen.
                     </p>
@@ -129,7 +172,7 @@ export function GeminiStudio() {
           </div>
         </ScrollArea>
       </div>
-      <div className="p-4 md:p-6 border-t bg-background">
+      <div className="p-4 md:p-6 border-t bg-background shrink-0">
         <div className="max-w-3xl mx-auto">
             <ModelSelector value={model} onValueChange={(val) => setModel(val as ModelType)} />
             <div className='h-4' />
