@@ -18,7 +18,6 @@ import { ChatBubble } from './chat-bubble';
 import { ImageDisplay } from './image-display';
 import { generateResponse } from '@/app/actions';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { generateConversationTitle } from '@/app/actions';
 import { UserImageDisplay } from './user-image-display';
 
 export type ModelType = 'Pro' | 'Flash' | 'Flash-Lite' | 'Image';
@@ -41,10 +40,11 @@ interface GeminiStudioProps {
   activeConversation: Conversation | null;
   onNewConversation: () => Promise<string>;
   onUpdateConversation: (conversation: Conversation) => void;
+  onUpdateTitle: (conversationId: string, prompt: string) => void;
 }
 
 
-export function GeminiStudio({ activeConversation, onNewConversation, onUpdateConversation }: GeminiStudioProps) {
+export function GeminiStudio({ activeConversation, onNewConversation, onUpdateConversation, onUpdateTitle }: GeminiStudioProps) {
   const [model, setModel] = useState<ModelType>('Pro');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -74,12 +74,7 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
     setIsLoading(true);
 
     let currentConvId = activeConversation?.id;
-    const isNewConv = !activeConversation || activeConversation.messages.length === 0;
-
-    // Use a function to update conversation to avoid stale state issues
-    const updateCurrentConversation = (updater: (conv: Conversation) => Conversation) => {
-        onUpdateConversation(updater(conversations.find(c => c.id === currentConvId)!));
-    };
+    const isNewConv = !currentConvId;
 
     try {
         let fileDataUri: string | undefined = undefined;
@@ -93,25 +88,27 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
             baseImageUrl: fileDataUri 
         };
 
-        // 1. Create new conversation if needed
+        let conversationToUpdate: Conversation;
+
         if (isNewConv) {
-            currentConvId = await onNewConversation();
-            const title = await generateConversationTitle({ prompt });
-            
-            // This is the first update with title and the first message
-            onUpdateConversation({ id: currentConvId, title, messages: [userMessage] });
-
-        } else if (currentConvId) {
-            // Add user message to existing conversation
-             updateCurrentConversation(conv => ({
-                ...conv,
-                messages: [...conv.messages, userMessage]
-            }));
+            const newConvId = await onNewConversation();
+            currentConvId = newConvId;
+            onUpdateTitle(newConvId, prompt);
+            conversationToUpdate = { id: newConvId, title: 'Ny samtale', messages: [userMessage] };
         } else {
-            throw new Error('Kunne ikke finde den aktive samtale.');
+            // Find the current conversation from the state, to make sure it's not stale
+             const currentConversation = activeConversation;
+             if (!currentConversation) {
+                 throw new Error("Aktiv samtale ikke fundet.");
+             }
+            conversationToUpdate = {
+                ...currentConversation,
+                messages: [...currentConversation.messages, userMessage]
+            };
         }
+        
+        onUpdateConversation(conversationToUpdate);
 
-        // 2. Generate response from AI
         const result = await generateResponse({ prompt, model, fileDataUri });
 
         if (result.error) {
@@ -132,11 +129,10 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
             };
         }
         
-        // 3. Add assistant message to the conversation
-        updateCurrentConversation(conv => ({
-            ...conv,
-            messages: [...conv.messages, assistantMessage]
-        }));
+        onUpdateConversation({
+            ...conversationToUpdate,
+            messages: [...conversationToUpdate.messages, assistantMessage]
+        });
 
 
     } catch (e: any) {
@@ -145,19 +141,15 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
             title: 'Fejl',
             description: e.message || 'Der opstod en uventet fejl.',
         });
-        // Optionally revert user message on error, though it might be better to show it failed
-        if (currentConvId) {
-             updateCurrentConversation(conv => ({
-                ...conv,
-                messages: conv.messages.slice(0, -1) // remove optimistic user message
-            }));
+        // Optional: Revert optimistic update
+        if (activeConversation) {
+            onUpdateConversation(activeConversation);
         }
+
     } finally {
         setIsLoading(false);
     }
   };
-
-  const conversations = activeConversation ? [activeConversation] : [];
 
   return (
     <div className='flex flex-col h-full bg-background'>

@@ -34,6 +34,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
+import { generateConversationTitle } from '@/app/actions';
 
 
 const initialConversations: Conversation[] = [
@@ -72,6 +73,13 @@ export default function Home() {
         }
         return [updatedConversation, ...prev];
     });
+  };
+
+  const handleUpdateConversationTitle = async (conversationId: string, prompt: string) => {
+    const newTitle = await generateConversationTitle({ prompt });
+    setConversations(prev =>
+      prev.map(c => (c.id === conversationId ? { ...c, title: newTitle } : c))
+    );
   };
 
   const handleSelectConversation = (id: string) => {
@@ -177,6 +185,7 @@ export default function Home() {
             activeConversation={activeConversation} 
             onNewConversation={handleNewConversation}
             onUpdateConversation={handleUpdateConversation} 
+            onUpdateTitle={handleUpdateConversationTitle}
         />
       </SidebarInset>
 
