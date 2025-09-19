@@ -80,7 +80,7 @@ const generateImageFromPromptFlow = ai.defineFlow(
       prompt: promptForModel,
       config: config,
     });
-
+    
     if (!media || !media.url) {
       throw new Error('No image was generated.');
     }
