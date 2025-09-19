@@ -6,7 +6,7 @@ export default function Home() {
     <div className="flex min-h-screen w-full flex-col items-center bg-background p-4 font-body">
       <header className="flex w-full max-w-3xl flex-col items-center justify-center py-8">
         <Image
-          src="https://www.sn.dk/wp-content/uploads/2023/12/SN-logo-rgb.png"
+          src="https://firebasestorage.googleapis.com/v0/b/marketplan-canvas.firebasestorage.app/o/Sj%C3%A6llandske_Nyheder_Bred_RGB_ny.png?alt=media&token=a37e81ab-1d4b-4913-bab2-c35a5fda6056"
           alt="Sjællandske Medier logo"
           width={400}
           height={100}
