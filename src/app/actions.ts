@@ -1,7 +1,7 @@
 'use server';
 
-import { analyzeTextSentiment } from '@/ai/flows/analyze-text-sentiment';
 import { generateImageFromPrompt } from '@/ai/flows/generate-image-from-prompt';
+import { generateTextFromPrompt } from '@/ai/flows/generate-text-from-prompt';
 import { z } from 'zod';
 
 const formSchema = z.object({
@@ -30,7 +30,7 @@ export async function generateResponse(
       const result = await generateImageFromPrompt({ promptText: prompt });
       return { data: result };
     } else {
-      const result = await analyzeTextSentiment({ text: prompt });
+      const result = await generateTextFromPrompt({ prompt: prompt });
       return { data: result };
     }
   } catch (e: any) {

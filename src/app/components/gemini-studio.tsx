@@ -86,7 +86,7 @@ export function GeminiStudio() {
       } else {
         assistantMessage = {
           role: 'assistant',
-          content: JSON.stringify(result.data, null, 2),
+          content: result.data.response,
         };
       }
       setMessages((prev) => [...prev, assistantMessage]);
