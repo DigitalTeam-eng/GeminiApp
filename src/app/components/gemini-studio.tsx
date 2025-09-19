@@ -71,83 +71,85 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
 
   const handleSubmit = async (prompt: string, file?: File) => {
     setIsLoading(true);
-
+  
     let currentConv = activeConversation;
-    const isNewConv = !currentConv || currentConv.messages.length === 0;
-
+  
     try {
-        let fileDataUri: string | undefined = undefined;
-        if (file) {
-            fileDataUri = await fileToDataUri(file);
+      let fileDataUri: string | undefined = undefined;
+      if (file) {
+        fileDataUri = await fileToDataUri(file);
+      }
+  
+      const userMessage: Message = {
+        role: 'user',
+        content: prompt,
+        baseImageUrl: fileDataUri,
+      };
+  
+      // Handle new conversation creation
+      if (!currentConv || currentConv.messages.length === 0 && !file) {
+        currentConv = await onNewConversation(prompt);
+      } else if (!currentConv && file) {
+        currentConv = await onNewConversation(prompt || `Billede: ${file.name}`);
+      }
+  
+      if (!currentConv) {
+        throw new Error("Samtale kunne ikke oprettes.");
+      }
+  
+      const conversationWithUserMessage = {
+        ...currentConv,
+        messages: [...currentConv.messages, userMessage]
+      };
+      onUpdateConversation(conversationWithUserMessage);
+  
+      let baseImageDataUri: string | undefined = fileDataUri;
+  
+      // If no new file is uploaded for an image model, find the last image in the conversation
+      if (!baseImageDataUri && model === 'Image' && conversationWithUserMessage.messages.length > 1) {
+        const lastImageMessage = [...conversationWithUserMessage.messages].reverse().find(m => m.imageUrl || m.baseImageUrl);
+        if (lastImageMessage) {
+          baseImageDataUri = lastImageMessage.imageUrl || lastImageMessage.baseImageUrl;
         }
-        
-        const userMessage: Message = { 
-            role: 'user', 
-            content: prompt,
-            baseImageUrl: fileDataUri 
+      }
+  
+      const result = await generateResponse({ prompt, model, baseImageDataUri });
+  
+      if (result.error) {
+        throw new Error(result.error);
+      }
+  
+      let assistantMessage: Message;
+      if (model === 'Image') {
+        assistantMessage = {
+          role: 'assistant',
+          imageUrl: result.data.imageDataUri,
+          prompt: prompt,
         };
-
-        if (isNewConv) {
-          currentConv = await onNewConversation(prompt);
-        }
-        
-        if (!currentConv) {
-          throw new Error("Samtale kunne ikke oprettes.");
-        }
-
-        const updatedMessages = [...currentConv.messages, userMessage];
-        const conversationWithUserMessage = { ...currentConv, messages: updatedMessages };
-        onUpdateConversation(conversationWithUserMessage);
-
-        let baseImageDataUri: string | undefined = fileDataUri;
-
-        // If no new file is uploaded for an image model, find the last image in the conversation
-        if (!baseImageDataUri && model === 'Image' && messages.length > 0) {
-            const lastImageMessage = [...messages].reverse().find(m => m.imageUrl || m.baseImageUrl);
-            if (lastImageMessage) {
-                baseImageDataUri = lastImageMessage.imageUrl || lastImageMessage.baseImageUrl;
-            }
-        }
-
-        const result = await generateResponse({ prompt, model, baseImageDataUri });
-
-        if (result.error) {
-            throw new Error(result.error);
-        }
-
-        let assistantMessage: Message;
-        if (model === 'Image') {
-            assistantMessage = {
-                role: 'assistant',
-                imageUrl: result.data.imageDataUri,
-                prompt: prompt,
-            };
-        } else {
-            assistantMessage = {
-                role: 'assistant',
-                content: result.data.response,
-            };
-        }
-        
-        onUpdateConversation({
-            ...conversationWithUserMessage,
-            messages: [...conversationWithUserMessage.messages, assistantMessage]
-        });
-
-
+      } else {
+        assistantMessage = {
+          role: 'assistant',
+          content: result.data.response,
+        };
+      }
+  
+      onUpdateConversation({
+        ...conversationWithUserMessage,
+        messages: [...conversationWithUserMessage.messages, assistantMessage]
+      });
+  
     } catch (e: any) {
-        toast({
-            variant: 'destructive',
-            title: 'Fejl',
-            description: e.message || 'Der opstod en uventet fejl.',
-        });
-        // Optional: Revert optimistic update
-        if (activeConversation) {
-            onUpdateConversation(activeConversation);
-        }
-
+      toast({
+        variant: 'destructive',
+        title: 'Fejl',
+        description: e.message || 'Der opstod en uventet fejl.',
+      });
+      // Optional: Revert optimistic update
+      if (activeConversation) {
+        onUpdateConversation(activeConversation);
+      }
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
