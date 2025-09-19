@@ -148,7 +148,7 @@ export default function Home() {
                                     {conv.title}
                                 </SidebarMenuButton>
                             )}
-                            <SidebarMenuAction showOnHover>
+                             <SidebarMenuAction showOnHover>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <Button variant="ghost" size="icon" className="h-6 w-6">

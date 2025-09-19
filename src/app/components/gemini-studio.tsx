@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, useEffect, useTransition } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Card,
@@ -19,6 +19,7 @@ import { ImageDisplay } from './image-display';
 import { generateResponse } from '@/app/actions';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { generateConversationTitle } from '@/app/actions';
+import { UserImageDisplay } from './user-image-display';
 
 export type ModelType = 'Pro' | 'Flash' | 'Flash-Lite' | 'Image';
 
@@ -27,6 +28,7 @@ export type Message = {
   content?: string;
   imageUrl?: string;
   prompt?: string;
+  baseImageUrl?: string;
 };
 
 export interface Conversation {
@@ -71,38 +73,42 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
   const handleSubmit = async (prompt: string, file?: File) => {
     setIsLoading(true);
 
+    let currentConvId = activeConversation?.id;
     const isNewConv = !activeConversation || activeConversation.messages.length === 0;
 
-    const userMessage: Message = { role: 'user', content: prompt };
-    const currentMessages = activeConversation?.messages ?? [];
-    const newMessages: Message[] = [...currentMessages, userMessage];
+    // Use a function to update conversation to avoid stale state issues
+    const updateCurrentConversation = (updater: (conv: Conversation) => Conversation) => {
+        onUpdateConversation(updater(conversations.find(c => c.id === currentConvId)!));
+    };
 
-    // Optimistically update UI with user message
-    if (activeConversation) {
-        onUpdateConversation({ ...activeConversation, messages: newMessages });
-    } else {
-        // This case should be handled by the onNewConversation logic, but as a fallback:
-        const tempConv: Conversation = { id: Date.now().toString(), title: 'Ny Samtale', messages: newMessages };
-        onUpdateConversation(tempConv);
-    }
-    
     try {
-        let currentConv = activeConversation;
-        // 1. Create new conversation if needed & generate title
-        if (isNewConv) {
-            const title = await generateConversationTitle({ prompt });
-            const newConvId = await onNewConversation();
-            currentConv = { id: newConvId, title, messages: newMessages };
-            onUpdateConversation(currentConv);
-        }
-
-        if (!currentConv) {
-             throw new Error('Kunne ikke finde den aktive samtale.');
-        }
-
         let fileDataUri: string | undefined = undefined;
         if (file) {
             fileDataUri = await fileToDataUri(file);
+        }
+        
+        const userMessage: Message = { 
+            role: 'user', 
+            content: prompt,
+            baseImageUrl: fileDataUri 
+        };
+
+        // 1. Create new conversation if needed
+        if (isNewConv) {
+            currentConvId = await onNewConversation();
+            const title = await generateConversationTitle({ prompt });
+            
+            // This is the first update with title and the first message
+            onUpdateConversation({ id: currentConvId, title, messages: [userMessage] });
+
+        } else if (currentConvId) {
+            // Add user message to existing conversation
+             updateCurrentConversation(conv => ({
+                ...conv,
+                messages: [...conv.messages, userMessage]
+            }));
+        } else {
+            throw new Error('Kunne ikke finde den aktive samtale.');
         }
 
         // 2. Generate response from AI
@@ -115,19 +121,23 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
         let assistantMessage: Message;
         if (model === 'Image') {
             assistantMessage = {
-            role: 'assistant',
-            imageUrl: result.data.imageDataUri,
-            prompt: prompt,
+                role: 'assistant',
+                imageUrl: result.data.imageDataUri,
+                prompt: prompt,
             };
         } else {
             assistantMessage = {
-            role: 'assistant',
-            content: result.data.response,
+                role: 'assistant',
+                content: result.data.response,
             };
         }
+        
+        // 3. Add assistant message to the conversation
+        updateCurrentConversation(conv => ({
+            ...conv,
+            messages: [...conv.messages, assistantMessage]
+        }));
 
-        const finalMessages = [...newMessages, assistantMessage];
-        onUpdateConversation({ ...currentConv, messages: finalMessages });
 
     } catch (e: any) {
         toast({
@@ -135,17 +145,22 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
             title: 'Fejl',
             description: e.message || 'Der opstod en uventet fejl.',
         });
-        // Revert user message on error
-        if (activeConversation) {
-             onUpdateConversation({ ...activeConversation, messages: currentMessages });
+        // Optionally revert user message on error, though it might be better to show it failed
+        if (currentConvId) {
+             updateCurrentConversation(conv => ({
+                ...conv,
+                messages: conv.messages.slice(0, -1) // remove optimistic user message
+            }));
         }
     } finally {
         setIsLoading(false);
     }
   };
 
+  const conversations = activeConversation ? [activeConversation] : [];
+
   return (
-    <div className='flex flex-col h-full'>
+    <div className='flex flex-col h-full bg-background'>
        <header className="flex items-center gap-4 p-4 border-b shrink-0">
         <SidebarTrigger className="md:hidden" />
         <h1 className="text-xl font-bold">Gemini Studie</h1>
@@ -160,8 +175,25 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
                     </p>
                 </div>
             )}
-            {messages.map((message, index) =>
-              message.imageUrl ? (
+            {messages.map((message, index) => {
+              if (message.role === 'user') {
+                return message.baseImageUrl ? (
+                    <UserImageDisplay 
+                        key={index}
+                        src={message.baseImageUrl}
+                        prompt={message.content ?? ''}
+                    />
+                ) : (
+                    <ChatBubble
+                        key={index}
+                        role={message.role}
+                        content={message.content ?? ''}
+                    />
+                );
+              }
+
+              // Assistant message
+              return message.imageUrl ? (
                 <ImageDisplay
                   key={index}
                   src={message.imageUrl}
@@ -173,8 +205,8 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
                   role={message.role}
                   content={message.content ?? ''}
                 />
-              )
-            )}
+              );
+            })}
              {isLoading && (
               <ChatBubble role="assistant" content="Tænker..." />
             )}
