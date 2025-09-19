@@ -37,24 +37,18 @@ export interface Conversation {
 
 interface GeminiStudioProps {
   activeConversation: Conversation | null;
-  onNewConversation: () => void;
+  onNewConversation: () => string; // Returns new conversation ID
   onUpdateConversation: (conversation: Conversation) => void;
 }
 
 
 export function GeminiStudio({ activeConversation, onNewConversation, onUpdateConversation }: GeminiStudioProps) {
   const [model, setModel] = useState<ModelType>('Pro');
-  const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const viewportRef = useRef<HTMLDivElement>(null);
-  const [isTitlePending, startTitleTransition] = useTransition();
-
-  const isNewConversation = activeConversation ? activeConversation.messages.length === 0 : false;
-
-  useEffect(() => {
-    setMessages(activeConversation?.messages ?? []);
-  }, [activeConversation]);
+  
+  const messages = activeConversation?.messages ?? [];
 
   useEffect(() => {
     if (viewportRef.current) {
@@ -67,87 +61,80 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
 
   const handleSubmit = async (prompt: string, file?: File) => {
     setIsLoading(true);
-    
-    let currentConversation = activeConversation;
-    let localIsNewConversation = isNewConversation;
 
-    if (!currentConversation) {
-      onNewConversation();
-      localIsNewConversation = true;
+    let currentConvId = activeConversation?.id;
+    const isNewConv = !currentConvId || (activeConversation && activeConversation.messages.length === 0);
+
+    // 1. Create new conversation if needed
+    if (isNewConv) {
+      currentConvId = onNewConversation();
     }
-
-    let fileDataUri: string | undefined = undefined;
-    if (file) {
-      if (model !== 'Image') {
-        toast({
-          variant: 'destructive',
-          title: 'Fejl',
-          description: 'Du kan kun vedhæfte billeder til Billede-modellen.',
-        });
+    
+    if (!currentConvId) {
+        toast({ variant: 'destructive', title: 'Fejl', description: 'Kunne ikke oprette eller finde samtale.' });
         setIsLoading(false);
         return;
-      }
-      fileDataUri = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
     }
 
     const userMessage: Message = { role: 'user', content: prompt };
-    
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
+    const newMessages: Message[] = [...messages, userMessage];
 
-    if (localIsNewConversation && activeConversation) {
-        startTitleTransition(async () => {
-          try {
-            const title = await generateConversationTitle({ prompt: prompt });
-             if (activeConversation) {
-                onUpdateConversation({ ...activeConversation, title });
-            }
-          } catch (error) {
-            console.error("Failed to generate title", error);
-          }
-        });
-    }
-    
-    const result = await generateResponse({ prompt, model });
-
-    if (result.error) {
-      toast({
-        variant: 'destructive',
-        title: 'Fejl',
-        description: result.error,
-      });
-       // Revert user message on error
-       setMessages(messages);
+    // Optimistically update UI with user message
+    if (activeConversation) {
+        onUpdateConversation({ ...activeConversation, id: currentConvId, messages: newMessages });
     } else {
-      let assistantMessage: Message;
-      if (model === 'Image') {
-        assistantMessage = {
-          role: 'assistant',
-          imageUrl: result.data.imageDataUri,
-          prompt: prompt,
-        };
-      } else {
-        assistantMessage = {
-          role: 'assistant',
-          content: result.data.response,
-        };
-      }
-      const finalMessages = [...newMessages, assistantMessage];
-      setMessages(finalMessages);
-      if(activeConversation) {
-        onUpdateConversation({...activeConversation, messages: finalMessages});
-      }
+         onUpdateConversation({ id: currentConvId, title: 'Ny Samtale', messages: newMessages });
     }
-    setIsLoading(false);
+    
+    try {
+        // 2. Generate response from AI
+        const result = await generateResponse({ prompt, model });
+
+        if (result.error) {
+            throw new Error(result.error);
+        }
+
+        let assistantMessage: Message;
+        if (model === 'Image') {
+            assistantMessage = {
+            role: 'assistant',
+            imageUrl: result.data.imageDataUri,
+            prompt: prompt,
+            };
+        } else {
+            assistantMessage = {
+            role: 'assistant',
+            content: result.data.response,
+            };
+        }
+
+        const finalMessages = [...newMessages, assistantMessage];
+        
+        // 3. Generate title if it's a new conversation
+        if (isNewConv) {
+            const title = await generateConversationTitle({ prompt });
+            onUpdateConversation({ id: currentConvId, title, messages: finalMessages });
+        } else if (activeConversation) {
+            onUpdateConversation({ ...activeConversation, messages: finalMessages });
+        }
+
+    } catch (e: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Fejl',
+            description: e.message || 'Der opstod en uventet fejl.',
+        });
+        // Revert user message on error
+        if (activeConversation) {
+             onUpdateConversation({ ...activeConversation, messages: messages });
+        }
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   return (
-    <div className='flex flex-col h-screen'>
+    <div className='flex flex-col h-full'>
        <header className="flex items-center gap-4 p-4 border-b shrink-0">
         <SidebarTrigger className="md:hidden" />
         <h1 className="text-xl font-bold">Gemini Studie</h1>
@@ -176,6 +163,9 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
                   content={message.content ?? ''}
                 />
               )
+            )}
+             {isLoading && (
+              <ChatBubble role="assistant" content="Tænker..." />
             )}
           </div>
         </ScrollArea>

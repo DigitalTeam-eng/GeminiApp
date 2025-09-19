@@ -61,10 +61,17 @@ export default function Home() {
     };
     setConversations(prev => [newConversation, ...prev]);
     setActiveConversationId(newConversation.id);
+    return newConversation.id;
   };
 
   const handleUpdateConversation = (updatedConversation: Conversation) => {
-    setConversations(prev => prev.map(c => c.id === updatedConversation.id ? updatedConversation : c));
+    setConversations(prev => {
+        const exists = prev.some(c => c.id === updatedConversation.id);
+        if (exists) {
+            return prev.map(c => c.id === updatedConversation.id ? updatedConversation : c)
+        }
+        return [updatedConversation, ...prev];
+    });
   };
 
   const handleSelectConversation = (id: string) => {
