@@ -16,6 +16,7 @@ import { PromptForm } from './prompt-form';
 import { ChatBubble } from './chat-bubble';
 import { ImageDisplay } from './image-display';
 import { generateResponse } from '@/app/actions';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 
 export type ModelType = 'Pro' | 'Flash' | 'Flash-Lite' | 'Image';
 
@@ -95,14 +96,14 @@ export function GeminiStudio() {
   };
 
   return (
-    <Card className="w-full max-w-3xl rounded-2xl shadow-lg flex flex-col h-[80vh]">
-      <CardHeader>
-        <CardDescription>Vælg en model for at begynde.</CardDescription>
-        <ModelSelector value={model} onValueChange={(val) => setModel(val as ModelType)} />
-      </CardHeader>
-      <CardContent className="flex-1 overflow-hidden">
-        <ScrollArea className="h-full pr-4" viewportRef={viewportRef}>
-          <div className="space-y-4">
+    <div className='flex flex-col h-full'>
+       <header className="flex items-center gap-4 p-4 border-b">
+        <SidebarTrigger className="md:hidden" />
+        <h1 className="text-xl font-bold">Gemini Studie</h1>
+      </header>
+      <div className='flex-1 overflow-hidden p-4 md:p-6'>
+          <ScrollArea className="h-full pr-4" viewportRef={viewportRef}>
+          <div className="space-y-4 max-w-3xl mx-auto">
             {messages.length === 0 && (
                  <div className="flex h-full items-center justify-center flex-col gap-4">
                     <p className="text-muted-foreground">
@@ -127,13 +128,17 @@ export function GeminiStudio() {
             )}
           </div>
         </ScrollArea>
-      </CardContent>
-      <CardFooter className="pt-6 flex flex-col items-start gap-2">
-        <PromptForm onSubmit={handleSubmit} isLoading={isLoading} />
-        <p className='text-xs text-muted-foreground'>
-            Tryk Shift+Enter for at lave et linjeskift.
-        </p>
-      </CardFooter>
-    </Card>
+      </div>
+      <div className="p-4 md:p-6 border-t bg-background">
+        <div className="max-w-3xl mx-auto">
+            <ModelSelector value={model} onValueChange={(val) => setModel(val as ModelType)} />
+            <div className='h-4' />
+            <PromptForm onSubmit={handleSubmit} isLoading={isLoading} />
+            <p className='text-xs text-muted-foreground mt-2'>
+                Tryk Shift+Enter for at lave et linjeskift.
+            </p>
+        </div>
+      </div>
+    </div>
   );
 }
