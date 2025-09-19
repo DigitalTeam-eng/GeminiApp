@@ -139,7 +139,7 @@ export function GeminiStudio({ activeConversation, onNewConversation }: GeminiSt
   };
 
   return (
-    <div className='flex flex-col h-full'>
+    <div className='flex flex-col h-screen'>
        <header className="flex items-center gap-4 p-4 border-b shrink-0">
         <SidebarTrigger className="md:hidden" />
         <h1 className="text-xl font-bold">Gemini Studie</h1>
