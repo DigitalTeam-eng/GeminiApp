@@ -54,32 +54,22 @@ export default function Home() {
     [conversations, activeConversationId]
   );
   
-  const handleNewConversation = async () => {
+  const handleNewConversation = async (prompt: string): Promise<Conversation> => {
+    const newTitle = await generateConversationTitle({ prompt });
     const newConversation: Conversation = {
         id: Date.now().toString(),
-        title: 'Ny Samtale',
+        title: newTitle,
         messages: [],
     };
     setConversations(prev => [newConversation, ...prev]);
     setActiveConversationId(newConversation.id);
-    return newConversation.id;
+    return newConversation;
   };
 
   const handleUpdateConversation = (updatedConversation: Conversation) => {
     setConversations(prev => {
-        const exists = prev.some(c => c.id === updatedConversation.id);
-        if (exists) {
-            return prev.map(c => c.id === updatedConversation.id ? updatedConversation : c)
-        }
-        return [updatedConversation, ...prev];
+        return prev.map(c => c.id === updatedConversation.id ? updatedConversation : c)
     });
-  };
-
-  const handleUpdateConversationTitle = async (conversationId: string, prompt: string) => {
-    const newTitle = await generateConversationTitle({ prompt });
-    setConversations(prev =>
-      prev.map(c => (c.id === conversationId ? { ...c, title: newTitle } : c))
-    );
   };
 
   const handleSelectConversation = (id: string) => {
@@ -128,7 +118,7 @@ export default function Home() {
             </div>
         </SidebarHeader>
         <SidebarContent className="p-2">
-            <Button variant="outline" className='w-full justify-start' onClick={handleNewConversation}>
+            <Button variant="outline" className='w-full justify-start' onClick={() => setActiveConversationId(null)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Ny samtale
             </Button>
@@ -185,7 +175,6 @@ export default function Home() {
             activeConversation={activeConversation} 
             onNewConversation={handleNewConversation}
             onUpdateConversation={handleUpdateConversation} 
-            onUpdateTitle={handleUpdateConversationTitle}
         />
       </SidebarInset>
 

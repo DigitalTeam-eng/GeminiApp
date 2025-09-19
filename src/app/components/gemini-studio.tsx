@@ -38,13 +38,12 @@ export interface Conversation {
 
 interface GeminiStudioProps {
   activeConversation: Conversation | null;
-  onNewConversation: () => Promise<string>;
+  onNewConversation: (prompt: string) => Promise<Conversation>;
   onUpdateConversation: (conversation: Conversation) => void;
-  onUpdateTitle: (conversationId: string, prompt: string) => void;
 }
 
 
-export function GeminiStudio({ activeConversation, onNewConversation, onUpdateConversation, onUpdateTitle }: GeminiStudioProps) {
+export function GeminiStudio({ activeConversation, onNewConversation, onUpdateConversation }: GeminiStudioProps) {
   const [model, setModel] = useState<ModelType>('Pro');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -73,8 +72,8 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
   const handleSubmit = async (prompt: string, file?: File) => {
     setIsLoading(true);
 
-    let currentConvId = activeConversation?.id;
-    const isNewConv = !currentConvId;
+    let currentConv = activeConversation;
+    const isNewConv = !currentConv || currentConv.messages.length === 0;
 
     try {
         let fileDataUri: string | undefined = undefined;
@@ -88,28 +87,29 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
             baseImageUrl: fileDataUri 
         };
 
-        let conversationToUpdate: Conversation;
-
         if (isNewConv) {
-            const newConvId = await onNewConversation();
-            currentConvId = newConvId;
-            onUpdateTitle(newConvId, prompt);
-            conversationToUpdate = { id: newConvId, title: 'Ny samtale', messages: [userMessage] };
-        } else {
-            // Find the current conversation from the state, to make sure it's not stale
-             const currentConversation = activeConversation;
-             if (!currentConversation) {
-                 throw new Error("Aktiv samtale ikke fundet.");
-             }
-            conversationToUpdate = {
-                ...currentConversation,
-                messages: [...currentConversation.messages, userMessage]
-            };
+          currentConv = await onNewConversation(prompt);
         }
         
-        onUpdateConversation(conversationToUpdate);
+        if (!currentConv) {
+          throw new Error("Samtale kunne ikke oprettes.");
+        }
 
-        const result = await generateResponse({ prompt, model, fileDataUri });
+        const updatedMessages = [...currentConv.messages, userMessage];
+        const conversationWithUserMessage = { ...currentConv, messages: updatedMessages };
+        onUpdateConversation(conversationWithUserMessage);
+
+        let baseImageDataUri: string | undefined = fileDataUri;
+
+        // If no new file is uploaded for an image model, find the last image in the conversation
+        if (!baseImageDataUri && model === 'Image' && messages.length > 0) {
+            const lastImageMessage = [...messages].reverse().find(m => m.imageUrl || m.baseImageUrl);
+            if (lastImageMessage) {
+                baseImageDataUri = lastImageMessage.imageUrl || lastImageMessage.baseImageUrl;
+            }
+        }
+
+        const result = await generateResponse({ prompt, model, baseImageDataUri });
 
         if (result.error) {
             throw new Error(result.error);
@@ -130,8 +130,8 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
         }
         
         onUpdateConversation({
-            ...conversationToUpdate,
-            messages: [...conversationToUpdate.messages, assistantMessage]
+            ...conversationWithUserMessage,
+            messages: [...conversationWithUserMessage.messages, assistantMessage]
         });
 
 

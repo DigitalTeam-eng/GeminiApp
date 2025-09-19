@@ -8,7 +8,7 @@ import { z } from 'zod';
 const formSchema = z.object({
   prompt: z.string().min(1, 'Prompt kan ikke være tom.'),
   model: z.enum(['Pro', 'Flash', 'Flash-Lite', 'Image']),
-  fileDataUri: z.string().optional(),
+  baseImageDataUri: z.string().optional(),
 });
 
 type ResponseType = {
@@ -25,13 +25,13 @@ export async function generateResponse(
     return { error: 'Ugyldigt input.' };
   }
 
-  const { prompt, model, fileDataUri } = validatedFields.data;
+  const { prompt, model, baseImageDataUri } = validatedFields.data;
 
   try {
     if (model === 'Image') {
       const imageGenInput: GenerateImageFromPromptInput = { promptText: prompt };
-      if (fileDataUri) {
-        imageGenInput.baseImage = { dataUri: fileDataUri };
+      if (baseImageDataUri) {
+        imageGenInput.baseImage = { dataUri: baseImageDataUri };
       }
       const result = await generateImageFromPrompt(imageGenInput);
       return { data: result };
