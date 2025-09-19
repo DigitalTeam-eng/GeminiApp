@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Paperclip, Send } from 'lucide-react';
-import React, { useRef, useState, useImperativeHandle, forwardRef } from 'react';
+import React, { useRef, useState } from 'react';
 
 const FormSchema = z.object({
   prompt: z.string().min(1, {
@@ -26,7 +26,7 @@ interface PromptFormProps {
   isLoading: boolean;
 }
 
-export const PromptForm = forwardRef<{ setPrompt: (prompt: string) => void }, PromptFormProps>(({ onSubmit, isLoading }, ref) => {
+export const PromptForm = ({ onSubmit, isLoading }: PromptFormProps) => {
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
@@ -35,13 +35,6 @@ export const PromptForm = forwardRef<{ setPrompt: (prompt: string) => void }, Pr
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-
-  useImperativeHandle(ref, () => ({
-    setPrompt(prompt: string) {
-      form.setValue('prompt', prompt);
-    }
-  }));
-
 
   function onFormSubmit(data: z.infer<typeof FormSchema>) {
     onSubmit(data.prompt, selectedFile || undefined);
@@ -122,6 +115,6 @@ export const PromptForm = forwardRef<{ setPrompt: (prompt: string) => void }, Pr
       </form>
     </Form>
   );
-});
+};
 
 PromptForm.displayName = 'PromptForm';

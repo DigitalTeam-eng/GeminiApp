@@ -16,9 +16,6 @@ import { PromptForm } from './prompt-form';
 import { ChatBubble } from './chat-bubble';
 import { ImageDisplay } from './image-display';
 import { generateResponse } from '@/app/actions';
-import { getSuggestionsFromPrompt } from '@/ai/flows/get-suggestions-from-prompt';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 
 export type ModelType = 'Pro' | 'Flash' | 'Flash-Lite' | 'Image';
 
@@ -33,11 +30,8 @@ export function GeminiStudio() {
   const [model, setModel] = useState<ModelType>('Pro');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const promptFormRef = useRef<{ setPrompt: (prompt: string) => void }>(null);
-
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -47,25 +41,6 @@ export function GeminiStudio() {
       });
     }
   }, [messages]);
-
-  useEffect(() => {
-    async function fetchSuggestions() {
-      try {
-        const result = await getSuggestionsFromPrompt({ modelType: model });
-        setSuggestions(result);
-      } catch (error) {
-        console.error('Failed to fetch suggestions:', error);
-      }
-    }
-    fetchSuggestions();
-  }, [model]);
-
-  const handleSuggestionClick = (suggestion: string) => {
-    if (promptFormRef.current) {
-        promptFormRef.current.setPrompt(suggestion);
-    }
-  };
-
 
   const handleSubmit = async (prompt: string, file?: File) => {
     setIsLoading(true);
@@ -133,14 +108,6 @@ export function GeminiStudio() {
                     <p className="text-muted-foreground">
                         Indtast en prompt nedenfor for at starte samtalen.
                     </p>
-                    <div className='flex flex-wrap gap-2 justify-center'>
-                      <p className='text-sm text-muted-foreground w-full text-center'>Eller prøv et af disse forslag:</p>
-                      {suggestions.map((suggestion, index) => (
-                        <Button key={index} variant="outline" size="sm" onClick={() => handleSuggestionClick(suggestion)}>
-                            {suggestion}
-                        </Button>
-                      ))}
-                    </div>
                 </div>
             )}
             {messages.map((message, index) =>
@@ -162,7 +129,7 @@ export function GeminiStudio() {
         </ScrollArea>
       </CardContent>
       <CardFooter className="pt-6 flex flex-col items-start gap-2">
-        <PromptForm ref={promptFormRef} onSubmit={handleSubmit} isLoading={isLoading} />
+        <PromptForm onSubmit={handleSubmit} isLoading={isLoading} />
         <p className='text-xs text-muted-foreground'>
             Tryk Shift+Enter for at lave et linjeskift.
         </p>
