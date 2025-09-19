@@ -1,3 +1,4 @@
+
 'use client';
 
 import { GeminiStudio, Conversation } from '@/app/components/gemini-studio';
@@ -60,6 +61,10 @@ export default function Home() {
     };
     setConversations(prev => [newConversation, ...prev]);
     setActiveConversationId(newConversation.id);
+  };
+
+  const handleUpdateConversation = (updatedConversation: Conversation) => {
+    setConversations(prev => prev.map(c => c.id === updatedConversation.id ? updatedConversation : c));
   };
 
   const handleSelectConversation = (id: string) => {
@@ -161,7 +166,11 @@ export default function Home() {
         </SidebarContent>
       </Sidebar>
       <SidebarInset className="flex flex-col flex-1">
-        <GeminiStudio activeConversation={activeConversation} onNewConversation={handleNewConversation} />
+        <GeminiStudio 
+            activeConversation={activeConversation} 
+            onNewConversation={handleNewConversation}
+            onUpdateConversation={handleUpdateConversation} 
+        />
       </SidebarInset>
 
       <AlertDialog open={!!deletingConversationId} onOpenChange={(open) => !open && setDeletingConversationId(null)}>

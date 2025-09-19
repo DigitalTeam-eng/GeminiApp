@@ -38,10 +38,11 @@ export interface Conversation {
 interface GeminiStudioProps {
   activeConversation: Conversation | null;
   onNewConversation: () => void;
+  onUpdateConversation: (conversation: Conversation) => void;
 }
 
 
-export function GeminiStudio({ activeConversation, onNewConversation }: GeminiStudioProps) {
+export function GeminiStudio({ activeConversation, onNewConversation, onUpdateConversation }: GeminiStudioProps) {
   const [model, setModel] = useState<ModelType>('Pro');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -98,9 +99,9 @@ export function GeminiStudio({ activeConversation, onNewConversation }: GeminiSt
         startTitleTransition(async () => {
             try {
                 const title = await generateConversationTitle({prompt});
-                // This would be where you update the conversation title in your state management
-                // For now, we'll just log it.
-                console.log("Generated title:", title);
+                if(activeConversation) {
+                    onUpdateConversation({...activeConversation, title});
+                }
             } catch (error) {
                 console.error("Failed to generate title", error);
             }
@@ -134,13 +135,15 @@ export function GeminiStudio({ activeConversation, onNewConversation }: GeminiSt
       }
       const finalMessages = [...newMessages, assistantMessage];
       setMessages(finalMessages);
-      // Here you would update the active conversation with the new messages
+      if(activeConversation) {
+        onUpdateConversation({...activeConversation, messages: finalMessages});
+      }
     }
     setIsLoading(false);
   };
 
   return (
-    <div className='flex flex-col h-full'>
+    <div className='flex flex-col h-screen'>
        <header className="flex items-center gap-4 p-4 border-b shrink-0">
         <SidebarTrigger className="md:hidden" />
         <h1 className="text-xl font-bold">Gemini Studie</h1>
@@ -149,7 +152,7 @@ export function GeminiStudio({ activeConversation, onNewConversation }: GeminiSt
           <ScrollArea className="h-full" viewportRef={viewportRef}>
           <div className="space-y-4 max-w-3xl mx-auto p-4 md:p-6">
             {messages.length === 0 && (
-                 <div className="flex items-center justify-center flex-col gap-4">
+                 <div className="flex items-center justify-center h-full">
                     <p className="text-muted-foreground">
                         Indtast en prompt nedenfor for at starte samtalen.
                     </p>
