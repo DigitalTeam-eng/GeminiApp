@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Card,
@@ -16,7 +16,7 @@ import { ModelSelector } from './model-selector';
 import { PromptForm } from './prompt-form';
 import { ChatBubble } from './chat-bubble';
 import { ImageDisplay } from './image-display';
-import { generateResponse } from '@/app/actions';
+import { generateResponse, generateConversationTitle } from '@/app/actions';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { UserImageDisplay } from './user-image-display';
 
@@ -38,7 +38,7 @@ export interface Conversation {
 
 interface GeminiStudioProps {
   activeConversation: Conversation | null;
-  onNewConversation: (prompt: string, initialMessage?: Message) => Promise<Conversation | null>;
+  onNewConversation: (prompt: string, initialMessage: Message) => Promise<Conversation | null>;
   onUpdateConversation: (conversation: Conversation) => void;
 }
 
@@ -49,8 +49,6 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
   const { toast } = useToast();
   const viewportRef = useRef<HTMLDivElement>(null);
   
-  const messages = activeConversation?.messages ?? [];
-
   useEffect(() => {
     if (viewportRef.current) {
       viewportRef.current.scrollTo({
@@ -58,7 +56,7 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
         behavior: 'smooth',
       });
     }
-  }, [messages]);
+  }, [activeConversation?.messages]);
 
   const fileToDataUri = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -71,87 +69,84 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
 
   const handleSubmit = async (prompt: string, file?: File) => {
     setIsLoading(true);
-  
+
     let currentConv = activeConversation;
-    let initialMessageForNewConv: Message | undefined = undefined;
-  
+
     try {
-      let fileDataUri: string | undefined = undefined;
-      if (file) {
-        fileDataUri = await fileToDataUri(file);
-      }
-  
-      const userMessage: Message = {
-        role: 'user',
-        content: prompt,
-        baseImageUrl: fileDataUri,
-      };
-  
-      // Handle new conversation creation
-      if (!currentConv) {
-        initialMessageForNewConv = userMessage;
-        const newConv = await onNewConversation(prompt || `Billede: ${file?.name || '...'}`, initialMessageForNewConv);
-        if (!newConv) {
-          throw new Error("Samtale kunne ikke oprettes.");
+        let fileDataUri: string | undefined = undefined;
+        if (file) {
+            fileDataUri = await fileToDataUri(file);
         }
-        currentConv = newConv;
-      } else {
-        const conversationWithUserMessage = {
-          ...currentConv,
-          messages: [...currentConv.messages, userMessage]
+
+        const userMessage: Message = {
+            role: 'user',
+            content: prompt,
+            baseImageUrl: fileDataUri,
         };
-        onUpdateConversation(conversationWithUserMessage);
-        currentConv = conversationWithUserMessage;
-      }
-  
-      let baseImageDataUri: string | undefined = fileDataUri;
-  
-      // If no new file is uploaded for an image model, find the last image in the conversation
-      if (!baseImageDataUri && model === 'Image' && currentConv.messages.length > 1) {
-        const lastImageMessage = [...currentConv.messages].reverse().find(m => m.imageUrl || m.baseImageUrl);
-        if (lastImageMessage) {
-          baseImageDataUri = lastImageMessage.imageUrl || lastImageMessage.baseImageUrl;
+
+        // Handle new conversation creation
+        if (!currentConv) {
+            const newConv = await onNewConversation(prompt || `Billede: ${file?.name || '...'}`, userMessage);
+            if (!newConv) {
+                throw new Error("Samtale kunne ikke oprettes.");
+            }
+            currentConv = newConv; // Use the newly created conversation
+        } else {
+             const conversationWithUserMessage = {
+                ...currentConv,
+                messages: [...currentConv.messages, userMessage]
+            };
+            onUpdateConversation(conversationWithUserMessage);
+            currentConv = conversationWithUserMessage;
         }
-      }
-  
-      const result = await generateResponse({ prompt, model, baseImageDataUri });
-  
-      if (result.error) {
-        throw new Error(result.error);
-      }
-  
-      let assistantMessage: Message;
-      if (model === 'Image') {
-        assistantMessage = {
-          role: 'assistant',
-          imageUrl: result.data.imageDataUri,
-          prompt: prompt,
+
+
+        let baseImageDataUri: string | undefined = fileDataUri;
+
+        if (!baseImageDataUri && model === 'Image' && currentConv.messages.length > 1) {
+            const lastImageMessage = [...currentConv.messages].reverse().find(m => m.imageUrl || m.baseImageUrl);
+            if (lastImageMessage) {
+                baseImageDataUri = lastImageMessage.imageUrl || lastImageMessage.baseImageUrl;
+            }
+        }
+        
+        const result = await generateResponse({ prompt, model, baseImageDataUri: baseImageDataUri || '' });
+
+        if (result.error) {
+            throw new Error(result.error);
+        }
+
+        let assistantMessage: Message;
+        if (model === 'Image') {
+            assistantMessage = {
+                role: 'assistant',
+                imageUrl: result.data.imageDataUri,
+                prompt: prompt,
+            };
+        } else {
+            assistantMessage = {
+                role: 'assistant',
+                content: result.data.response,
+            };
+        }
+        
+        const finalConversation = {
+            ...currentConv,
+            messages: [...currentConv.messages, assistantMessage]
         };
-      } else {
-        assistantMessage = {
-          role: 'assistant',
-          content: result.data.response,
-        };
-      }
-      
-      const finalConversation = {
-        ...currentConv,
-        messages: [...currentConv.messages, assistantMessage]
-      };
-      onUpdateConversation(finalConversation);
-  
+        onUpdateConversation(finalConversation);
+
     } catch (e: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Fejl',
-        description: e.message || 'Der opstod en uventet fejl.',
-      });
-      // Optional: Revert optimistic update by fetching the original state if needed
-      // For now, we'll just log the error and stop loading
+        toast({
+            variant: 'destructive',
+            title: 'Fejl',
+            description: e.message || 'Der opstod en uventet fejl.',
+        });
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
-  };
+};
+
 
   return (
     <div className='flex flex-col h-full bg-background'>
@@ -162,14 +157,14 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
       <div className='flex-1 overflow-y-auto'>
           <ScrollArea className="h-full" viewportRef={viewportRef}>
           <div className="space-y-4 max-w-3xl mx-auto p-4 md:p-6">
-            {messages.length === 0 && (
+            {(activeConversation?.messages ?? []).length === 0 && (
                  <div className="flex items-center justify-center h-full">
                     <p className="text-muted-foreground">
                         Indtast en prompt nedenfor for at starte samtalen.
                     </p>
                 </div>
             )}
-            {messages.map((message, index) => {
+            {(activeConversation?.messages ?? []).map((message, index) => {
               if (message.role === 'user') {
                 return message.baseImageUrl ? (
                     <UserImageDisplay 
@@ -207,7 +202,7 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
           </div>
         </ScrollArea>
       </div>
-      <div className="p-4 md:p-6 border-t bg-background shrink-0">
+      <div className="p-4 md:p-6 border-t bg-card shrink-0">
         <div className="max-w-3xl mx-auto">
             <ModelSelector value={model} onValueChange={(val) => setModel(val as ModelType)} />
             <div className='h-4' />
