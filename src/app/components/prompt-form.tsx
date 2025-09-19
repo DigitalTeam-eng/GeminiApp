@@ -16,7 +16,7 @@ import { Loader2, Send } from 'lucide-react';
 
 const FormSchema = z.object({
   prompt: z.string().min(1, {
-    message: 'Prompt cannot be empty.',
+    message: 'Prompt kan ikke være tom.',
   }),
 });
 
@@ -59,7 +59,7 @@ export function PromptForm({ onSubmit, isLoading }: PromptFormProps) {
             <FormItem className="flex-1">
               <FormControl>
                 <Textarea
-                  placeholder="Enter your prompt here..."
+                  placeholder="Indtast din prompt her..."
                   className="resize-none"
                   {...field}
                   onKeyDown={handleKeyDown}

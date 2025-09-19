@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'Gemini Studio',
-  description: 'An interface to interact with Gemini AI models.',
+  title: 'Gemini Studie',
+  description: 'Et interface til at interagere med Gemini AI-modeller.',
 };
 
 export default function RootLayout({
@@ -13,7 +13,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="da">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link

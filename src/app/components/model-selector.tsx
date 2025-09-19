@@ -17,13 +17,13 @@ export function ModelSelector({ value, onValueChange }: ModelSelectorProps) {
   return (
     <Select value={value} onValueChange={onValueChange}>
       <SelectTrigger className="w-full sm:w-1/2">
-        <SelectValue placeholder="Select a model" />
+        <SelectValue placeholder="Vælg en model" />
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="Pro">Pro</SelectItem>
         <SelectItem value="Flash">Flash</SelectItem>
         <SelectItem value="Flash-Lite">Flash-Lite</SelectItem>
-        <SelectItem value="Image">Image</SelectItem>
+        <SelectItem value="Image">Billede</SelectItem>
       </SelectContent>
     </Select>
   );

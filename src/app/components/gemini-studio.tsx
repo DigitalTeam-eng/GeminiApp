@@ -52,7 +52,7 @@ export function GeminiStudio() {
     if (result.error) {
       toast({
         variant: 'destructive',
-        title: 'Error',
+        title: 'Fejl',
         description: result.error,
       });
     } else {
@@ -77,7 +77,7 @@ export function GeminiStudio() {
   return (
     <Card className="w-full max-w-3xl rounded-2xl shadow-lg flex flex-col h-[80vh]">
       <CardHeader>
-        <CardDescription>Select a model to begin.</CardDescription>
+        <CardDescription>Vælg en model for at begynde.</CardDescription>
         <ModelSelector value={model} onValueChange={(val) => setModel(val as ModelType)} />
       </CardHeader>
       <CardContent className="flex-1 overflow-hidden">
@@ -86,7 +86,7 @@ export function GeminiStudio() {
             {messages.length === 0 && (
                  <div className="flex h-full items-center justify-center">
                     <p className="text-muted-foreground">
-                        Enter a prompt below to start the conversation.
+                        Indtast en prompt nedenfor for at starte samtalen.
                     </p>
                 </div>
             )}
@@ -95,7 +95,7 @@ export function GeminiStudio() {
                 <ImageDisplay
                   key={index}
                   src={message.imageUrl}
-                  prompt={message.prompt ?? 'Generated image'}
+                  prompt={message.prompt ?? 'Genereret billede'}
                 />
               ) : (
                 <ChatBubble

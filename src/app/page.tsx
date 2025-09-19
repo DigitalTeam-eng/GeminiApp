@@ -7,7 +7,7 @@ export default function Home() {
        <header className="flex w-full max-w-3xl items-center justify-center py-8">
         <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
           <Sparkles className="h-6 w-6 text-primary" />
-          Gemini Studio
+          Gemini Studie
         </h1>
       </header>
       <main className="flex w-full flex-1 flex-col items-center">

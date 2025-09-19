@@ -5,7 +5,7 @@ import { generateImageFromPrompt } from '@/ai/flows/generate-image-from-prompt';
 import { z } from 'zod';
 
 const formSchema = z.object({
-  prompt: z.string().min(1, 'Prompt cannot be empty.'),
+  prompt: z.string().min(1, 'Prompt kan ikke være tom.'),
   model: z.enum(['Pro', 'Flash', 'Flash-Lite', 'Image']),
 });
 
@@ -20,7 +20,7 @@ export async function generateResponse(
   const validatedFields = formSchema.safeParse(values);
 
   if (!validatedFields.success) {
-    return { error: 'Invalid input.' };
+    return { error: 'Ugyldigt input.' };
   }
 
   const { prompt, model } = validatedFields.data;
@@ -35,6 +35,6 @@ export async function generateResponse(
     }
   } catch (e: any) {
     console.error(e);
-    return { error: e.message || 'An unexpected error occurred.' };
+    return { error: e.message || 'Der opstod en uventet fejl.' };
   }
 }
