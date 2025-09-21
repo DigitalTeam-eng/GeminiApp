@@ -12,7 +12,6 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { Part } from '@genkit-ai/googleai';
 
-
 const HistoryMessageSchema = z.object({
   role: z.enum(['user', 'model']),
   content: z.string(),
@@ -43,19 +42,16 @@ const generateTextFromPromptFlow = ai.defineFlow(
     outputSchema: GenerateTextFromPromptOutputSchema,
   },
   async input => {
-    const historyParts: Part[] = (input.history || []).map(msg => ({
-      role: msg.role,
-      parts: [{ text: msg.content }],
-    }));
-
+    // Gemini 1.5 Flash expects a flat array of strings for history, not role-based objects.
+    const promptHistory: string[] = (input.history || []).map(msg => msg.content);
+    
     const promptForModel = [
-        ...historyParts,
-        { role: 'user', parts: [{ text: input.prompt }] },
+      ...promptHistory,
+      input.prompt
     ];
 
-
     const {text} = await ai.generate({
-        prompt: promptForModel as any, // Cast to any to handle structure
+        prompt: promptForModel,
     });
     return {response: text};
   }
