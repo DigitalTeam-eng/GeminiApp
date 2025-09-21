@@ -80,9 +80,7 @@ export const PromptForm = ({ onSubmit, isLoading }: PromptFormProps) => {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files) {
-      setSelectedFiles(Array.from(files));
-    } else {
-      resetFileState();
+      setSelectedFiles(prevFiles => [...prevFiles, ...Array.from(files)]);
     }
   };
 
