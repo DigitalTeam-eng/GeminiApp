@@ -7,8 +7,8 @@ import {
   useState,
   ReactNode,
 } from 'react';
-import { onAuthStateChanged, User, signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { onAuthStateChanged, User, signOut, Auth } from 'firebase/auth';
+import { getFirebaseAuth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
@@ -29,7 +29,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
   useEffect(() => {
-    // Sørg for at 'auth' er defineret, før du bruger den
+    const auth = getFirebaseAuth();
     if (!auth) {
         setLoading(false);
         return;
@@ -43,6 +43,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const logout = async () => {
+    const auth = getFirebaseAuth();
     if (auth) {
         await signOut(auth);
         router.push('/login');

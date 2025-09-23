@@ -6,7 +6,7 @@ import {
   signInWithRedirect,
   OAuthProvider,
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { getFirebaseAuth } from '@/lib/firebase';
 import { useAuth } from '@/app/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 
@@ -21,6 +21,7 @@ export default function LoginPage() {
   }, [user, loading, router]);
 
   const handleLogin = async () => {
+    const auth = getFirebaseAuth();
     if (!auth) {
         console.error("Auth service is not available.");
         return;

@@ -14,13 +14,27 @@ const firebaseConfig = {
 let app: FirebaseApp;
 let auth: Auth;
 
-if (typeof window !== 'undefined') {
-  if (!getApps().length) {
-    app = initializeApp(firebaseConfig);
-  } else {
-    app = getApp();
-  }
-  auth = getAuth(app);
+function getFirebaseApp() {
+    if (typeof window === 'undefined') {
+        return null;
+    }
+    if (!getApps().length) {
+        app = initializeApp(firebaseConfig);
+    } else {
+        app = getApp();
+    }
+    return app;
 }
 
-export { auth };
+function getFirebaseAuth() {
+    const app = getFirebaseApp();
+    if (!app) {
+        return null;
+    }
+    if (!auth) {
+        auth = getAuth(app);
+    }
+    return auth;
+}
+
+export { getFirebaseAuth, getFirebaseApp };
