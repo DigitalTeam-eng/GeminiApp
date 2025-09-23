@@ -19,11 +19,6 @@ function getFirebaseApp() {
             messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
             appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
         };
-        // Check if all keys are present
-        if (!firebaseConfig.apiKey) {
-            console.error("Firebase API Key is missing. Check your environment variables.");
-            return null;
-        }
         app = initializeApp(firebaseConfig);
     } else {
         app = getApp();
