@@ -21,7 +21,7 @@ function getFirebaseApp() {
         };
         // Check if all keys are present
         if (!firebaseConfig.apiKey) {
-            console.error("Firebase API Key is missing. Check your .env.local file.");
+            console.error("Firebase API Key is missing. Check your environment variables.");
             return null;
         }
         app = initializeApp(firebaseConfig);
