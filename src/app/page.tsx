@@ -15,8 +15,8 @@ import {
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
-import { MoreHorizontal, Plus, Trash2 } from 'lucide-react';
-import { useState, useMemo, useCallback } from 'react';
+import { MoreHorizontal, Plus, Trash2, LogOut } from 'lucide-react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,6 +35,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { generateConversationTitle } from '@/app/actions';
+import { useAuth } from './auth/auth-provider';
+import { useRouter } from 'next/navigation';
 
 
 const initialConversations: Conversation[] = [
@@ -48,6 +50,16 @@ export default function Home() {
   const [renamingConversationId, setRenamingConversationId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState('');
   const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null);
+
+  const { user, loading, logout } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+
 
   const activeConversation = useMemo(
     () => conversations.find(c => c.id === activeConversationId) ?? null,
@@ -115,6 +127,14 @@ export default function Home() {
     }
   };
 
+  if (loading || !user) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <p>Indlæser...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen w-full flex">
       <Sidebar side="left" variant="sidebar" collapsible="offcanvas">
@@ -130,7 +150,7 @@ export default function Home() {
                 <SidebarTrigger className="ml-auto" />
             </div>
         </SidebarHeader>
-        <SidebarContent className="p-2">
+        <SidebarContent className="p-2 flex flex-col">
             <Button variant="outline" className='w-full justify-start' onClick={() => setActiveConversationId(null)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Ny samtale
@@ -180,6 +200,12 @@ export default function Home() {
                         </SidebarMenuItem>
                     ))}
                 </SidebarMenu>
+            </div>
+            <div className="mt-auto p-2">
+              <Button variant="ghost" className="w-full justify-start" onClick={logout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Log ud
+              </Button>
             </div>
         </SidebarContent>
       </Sidebar>
