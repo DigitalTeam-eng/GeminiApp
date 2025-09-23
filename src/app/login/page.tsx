@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  signInWithRedirect,
+  signInWithPopup,
   OAuthProvider,
 } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
@@ -32,7 +32,7 @@ export default function LoginPage() {
       tenant: 'sn.dk',
     });
     try {
-      await signInWithRedirect(auth, provider);
+      await signInWithPopup(auth, provider);
     } catch (error) {
       console.error('Error during sign-in:', error);
     }
