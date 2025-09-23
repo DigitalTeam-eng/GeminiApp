@@ -1,4 +1,3 @@
-// src/app/login/page.tsx
 'use client';
 
 import { useEffect } from 'react';
@@ -6,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import {
   signInWithRedirect,
   OAuthProvider,
-  getRedirectResult,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useAuth } from '@/app/auth/auth-provider';
@@ -23,6 +21,10 @@ export default function LoginPage() {
   }, [user, loading, router]);
 
   const handleLogin = async () => {
+    if (!auth) {
+        console.error("Auth service is not available.");
+        return;
+    }
     const provider = new OAuthProvider('microsoft.com');
     provider.setCustomParameters({
       prompt: 'select_account',
@@ -34,20 +36,6 @@ export default function LoginPage() {
       console.error('Error during sign-in:', error);
     }
   };
-
-  // Håndter omdirigering efter login
-  useEffect(() => {
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result) {
-          // Brugeren er logget ind
-          router.push('/');
-        }
-      })
-      .catch((error) => {
-        console.error('Error getting redirect result:', error);
-      });
-  }, [router]);
 
   if (loading || user) {
      return (

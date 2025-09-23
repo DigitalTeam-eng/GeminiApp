@@ -14,12 +14,12 @@ const firebaseConfig = {
 let app: FirebaseApp;
 let auth: Auth;
 
-// Sikrer, at vi kun initialiserer i browseren
-if (typeof window !== 'undefined' && !getApps().length) {
-  app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
-} else if (getApps().length > 0) {
-  app = getApp();
+if (typeof window !== 'undefined') {
+  if (!getApps().length) {
+    app = initializeApp(firebaseConfig);
+  } else {
+    app = getApp();
+  }
   auth = getAuth(app);
 }
 

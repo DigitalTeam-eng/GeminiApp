@@ -1,4 +1,3 @@
-// src/app/auth/auth-provider.tsx
 'use client';
 
 import {
@@ -30,6 +29,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
   useEffect(() => {
+    // Sørg for at 'auth' er defineret, før du bruger den
+    if (!auth) {
+        setLoading(false);
+        return;
+    }
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
@@ -39,8 +43,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const logout = async () => {
-    await signOut(auth);
-    router.push('/login');
+    if (auth) {
+        await signOut(auth);
+        router.push('/login');
+    }
   };
 
   return (
