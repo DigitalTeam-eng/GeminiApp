@@ -1,9 +1,8 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { SidebarProvider } from '@/components/ui/sidebar';
-import { AuthProvider } from './auth/auth-provider';
-import { Providers } from './providers';
 
 export const metadata: Metadata = {
   title: 'Gemini Studie',
@@ -30,12 +29,10 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <Providers>
-            <SidebarProvider>
-              {children}
-            </SidebarProvider>
-            <Toaster />
-        </Providers>
+        <SidebarProvider>
+          {children}
+        </SidebarProvider>
+        <Toaster />
       </body>
     </html>
   );
