@@ -27,6 +27,7 @@ export type Message = {
   imageUrl?: string;
   prompt?: string;
   baseImageUrls?: string[];
+  model?: string;
 };
 
 export interface Conversation {
@@ -123,11 +124,13 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
                 role: 'assistant',
                 imageUrl: result.data.imageDataUri,
                 prompt: prompt,
+                model: result.data.model,
             };
         } else {
             assistantMessage = {
                 role: 'assistant',
                 content: result.data.response,
+                model: result.data.model,
             };
         }
         
@@ -188,12 +191,14 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
                   key={index}
                   src={message.imageUrl}
                   prompt={message.prompt ?? 'Genereret billede'}
+                  model={message.model}
                 />
               ) : (
                 <ChatBubble
                   key={index}
                   role={message.role}
                   content={message.content ?? ''}
+                  model={message.model}
                 />
               );
             })}

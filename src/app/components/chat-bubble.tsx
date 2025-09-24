@@ -5,13 +5,15 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { FormattedContent } from './formatted-content';
+import { Badge } from '@/components/ui/badge';
 
 interface ChatBubbleProps {
   role: 'user' | 'assistant';
   content: string;
+  model?: string;
 }
 
-export function ChatBubble({ role, content }: ChatBubbleProps) {
+export function ChatBubble({ role, content, model }: ChatBubbleProps) {
   const isUser = role === 'user';
   const isAssistant = role === 'assistant';
 
@@ -27,16 +29,23 @@ export function ChatBubble({ role, content }: ChatBubbleProps) {
                 <AvatarFallback>AI</AvatarFallback>
             </Avatar>
         )}
-      <div
-        className={cn(
-          'relative max-w-[80%] rounded-2xl p-4 prose dark:prose-invert prose-p:my-0',
-          isUser ? 'bg-primary text-primary-foreground' : 'bg-card'
-        )}
-      >
-        {isAssistant ? (
-            <FormattedContent content={content} />
-        ) : (
-            <p className="whitespace-pre-wrap text-sm">{content}</p>
+      <div className="flex flex-col gap-2">
+        <div
+          className={cn(
+            'relative max-w-[80%] rounded-2xl p-4 prose dark:prose-invert prose-p:my-0',
+            isUser ? 'bg-primary text-primary-foreground' : 'bg-card'
+          )}
+        >
+          {isAssistant ? (
+              <FormattedContent content={content} />
+          ) : (
+              <p className="whitespace-pre-wrap text-sm">{content}</p>
+          )}
+        </div>
+         {isAssistant && model && (
+            <Badge variant="outline" className="self-start text-xs">
+                Genereret med {model}
+            </Badge>
         )}
       </div>
       {isUser && (

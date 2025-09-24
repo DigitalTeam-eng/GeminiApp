@@ -28,7 +28,8 @@ type RouteUserPromptInput = z.infer<typeof RouteUserPromptInputSchema>;
 
 const RouteUserPromptOutputSchema = z.object({
     type: z.enum(['text', 'image']),
-    result: z.any()
+    result: z.any(),
+    model: z.string().describe('The name of the model used to generate the response.'),
 });
 type RouteUserPromptOutput = z.infer<typeof RouteUserPromptOutputSchema>;
 
@@ -45,14 +46,17 @@ const routeUserPromptFlow = ai.defineFlow(
     outputSchema: RouteUserPromptOutputSchema,
   },
   async (input) => {
+    let modelToUse: string;
+
     // If images are attached, it's always an image task.
     if (input.baseImageDataUris && input.baseImageDataUris.length > 0) {
+        modelToUse = 'Gemini Flash Image';
         const imageInput: GenerateImageFromPromptInput = {
             promptText: input.prompt,
             baseImages: input.baseImageDataUris.map(dataUri => ({ dataUri }))
         };
         const result = await generateImageFromPrompt(imageInput);
-        return { type: 'image', result };
+        return { type: 'image', result, model: modelToUse };
     }
 
     // Otherwise, ask the model to classify the prompt.
@@ -73,16 +77,18 @@ const routeUserPromptFlow = ai.defineFlow(
     const { output } = await classificationPrompt({ prompt: input.prompt });
 
     if (output?.task === 'image_generation') {
+        modelToUse = 'Imagen';
         const imageInput: GenerateImageFromPromptInput = { promptText: input.prompt };
         const result = await generateImageFromPrompt(imageInput);
-        return { type: 'image', result };
+        return { type: 'image', result, model: modelToUse };
     } else {
+        modelToUse = 'Gemini Flash';
         const textInput: GenerateTextFromPromptInput = { 
             prompt: input.prompt,
             history: input.history || []
         };
         const result = await generateTextFromPrompt(textInput);
-        return { type: 'text', result };
+        return { type: 'text', result, model: modelToUse };
     }
   }
 );

@@ -50,9 +50,9 @@ export async function generateResponse(
     const result = await routeUserPrompt(routeInput);
 
     if (result.type === 'image') {
-       return { data: { type: 'image', ...result.result } };
+       return { data: { type: 'image', model: result.model, ...result.result } };
     } else {
-       return { data: { type: 'text', ...result.result } };
+       return { data: { type: 'text', model: result.model, ...result.result } };
     }
     
   } catch (e: any) {
