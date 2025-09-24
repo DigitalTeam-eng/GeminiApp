@@ -60,57 +60,80 @@ const generateImageFromPromptFlow = ai.defineFlow(
     let modelToUse: string;
     let promptForModel: (string | Part)[] | string;
     let config: any = {};
-    let finalPromptText = input.promptText;
+    
+    const safetySettings = [
+      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+    ];
+    
+    config = { responseModalities: ['TEXT', 'IMAGE'], safetySettings };
 
     if (input.baseImages && input.baseImages.length > 0) {
-      // Image-to-image generation
       modelToUse = 'googleai/gemini-2.5-flash-image-preview'; // "Nano Banana"
       
-      // Check for transparency keywords and adjust the prompt
       const transparencyKeywords = ['transparent', 'gennemsigtig', 'remove background'];
       const requiresTransparency = transparencyKeywords.some(keyword =>
         input.promptText.toLowerCase().includes(keyword)
       );
 
       if (requiresTransparency) {
-        finalPromptText = "Isolate the main subject and make the background solid black. Only the main subject should be visible.";
+        // Step 1: Generate a mask
+        const maskPromptParts: Part[] = [
+            { text: "Generate a segmentation mask. Make the background solid white and the main subject solid black." }
+        ];
+        input.baseImages.forEach(image => {
+            maskPromptParts.push({ media: { url: image.dataUri } });
+        });
+
+        const { media: maskMedia } = await ai.generate({
+          model: modelToUse,
+          prompt: maskPromptParts,
+          config: config,
+        });
+
+        if (!maskMedia || !maskMedia.url) {
+          throw new Error('Mask generation failed.');
+        }
+
+        // Step 2: Use the mask to create the transparent image
+        const finalPromptParts: Part[] = [
+          { text: "Using the provided mask, make the background of the original image transparent. Output a PNG with an alpha channel." },
+        ];
+         input.baseImages.forEach(image => { // Original image
+            finalPromptParts.push({ media: { url: image.dataUri } });
+        });
+        finalPromptParts.push({ media: { url: maskMedia.url } }); // Mask
+
+        const { media: finalMedia } = await ai.generate({
+          model: modelToUse,
+          prompt: finalPromptParts,
+          config: config,
+        });
+        
+        if (!finalMedia || !finalMedia.url) {
+            throw new Error('Final transparent image generation failed.');
+        }
+
+        return { imageDataUri: finalMedia.url };
       }
 
-      const promptParts: Part[] = [{ text: finalPromptText }];
+      // Default image-to-image without transparency
+      const promptParts: Part[] = [{ text: input.promptText }];
       input.baseImages.forEach(image => {
         promptParts.push({ media: { url: image.dataUri } });
       });
-      
       promptForModel = promptParts;
       
-      config = {
-        responseModalities: ['TEXT', 'IMAGE'],
-        safetySettings: [
-          {
-            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-            threshold: 'BLOCK_NONE',
-          },
-          {
-            category: 'HARM_CATEGORY_HARASSMENT',
-            threshold: 'BLOCK_NONE',
-          },
-          {
-            category: 'HARM_CATEGORY_HATE_SPEECH',
-            threshold: 'BLOCK_NONE',
-          },
-          {
-            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-            threshold: 'BLOCK_NONE',
-          },
-        ],
-      };
     } else {
       // Text-to-image generation
       modelToUse = 'googleai/imagen-4.0-fast-generate-001';
       promptForModel = input.promptText;
+      config = {}; // Reset config for text-to-image
     }
 
-    const {media} = await ai.generate({
+    const { media } = await ai.generate({
       model: modelToUse,
       prompt: promptForModel,
       config: config,
@@ -120,6 +143,6 @@ const generateImageFromPromptFlow = ai.defineFlow(
       throw new Error('No image was generated.');
     }
 
-    return {imageDataUri: media.url};
+    return { imageDataUri: media.url };
   }
 );
