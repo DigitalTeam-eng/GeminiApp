@@ -77,50 +77,16 @@ const generateImageFromPromptFlow = ai.defineFlow(
       const requiresTransparency = transparencyKeywords.some(keyword =>
         input.promptText.toLowerCase().includes(keyword)
       );
+      
+      let finalPromptText = input.promptText;
 
       if (requiresTransparency) {
-        // Step 1: Generate a mask
-        const maskPromptParts: Part[] = [
-            { text: "Generate a segmentation mask. Make the background solid white and the main subject solid black." }
-        ];
-        input.baseImages.forEach(image => {
-            maskPromptParts.push({ media: { url: image.dataUri } });
-        });
-
-        const { media: maskMedia } = await ai.generate({
-          model: modelToUse,
-          prompt: maskPromptParts,
-          config: config,
-        });
-
-        if (!maskMedia || !maskMedia.url) {
-          throw new Error('Mask generation failed.');
-        }
-
-        // Step 2: Use the mask to create the transparent image
-        const finalPromptParts: Part[] = [
-          { text: "Using the provided mask, replace the background of the original image with an alpha channel to make it transparent. The output must be a PNG file with a true alpha channel." },
-        ];
-         input.baseImages.forEach(image => { // Original image
-            finalPromptParts.push({ media: { url: image.dataUri } });
-        });
-        finalPromptParts.push({ media: { url: maskMedia.url } }); // Mask
-
-        const { media: finalMedia } = await ai.generate({
-          model: modelToUse,
-          prompt: finalPromptParts,
-          config: config,
-        });
-        
-        if (!finalMedia || !finalMedia.url) {
-            throw new Error('Final transparent image generation failed.');
-        }
-
-        return { imageDataUri: finalMedia.url };
+        // This is a more reliable prompt to isolate the subject.
+        finalPromptText = "Isolate the main subject from the background. Make the background a solid black color. Do not add any shadows or reflections to the background. Only the main subject should be visible against the black background."
       }
 
-      // Default image-to-image without transparency
-      const promptParts: Part[] = [{ text: input.promptText }];
+      // Default image-to-image 
+      const promptParts: Part[] = [{ text: finalPromptText }];
       input.baseImages.forEach(image => {
         promptParts.push({ media: { url: image.dataUri } });
       });
