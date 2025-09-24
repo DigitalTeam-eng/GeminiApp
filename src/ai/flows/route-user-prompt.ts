@@ -1,0 +1,88 @@
+'use server';
+
+/**
+ * @fileOverview This file defines a Genkit flow for routing a user's prompt to the appropriate model (text or image).
+ *
+ * - routeUserPrompt - A function that analyzes a prompt and routes it to either the text or image generation flow.
+ * - RouteUserPromptInput - The input type for the routeUserPrompt function.
+ * - RouteUserPromptOutput - The return type for the routeUserPrompt function.
+ */
+
+import {ai} from '@/ai/genkit';
+import {z} from 'genkit';
+import {
+    generateTextFromPrompt,
+    GenerateTextFromPromptInput,
+} from './generate-text-from-prompt';
+import {
+    generateImageFromPrompt,
+    GenerateImageFromPromptInput,
+} from './generate-image-from-prompt';
+
+const RouteUserPromptInputSchema = z.object({
+  prompt: z.string().describe('The user prompt to analyze and route.'),
+  baseImageDataUris: z.array(z.string()).optional().describe('Optional base images for image-to-image tasks.'),
+  history: z.array(z.any()).optional().describe('Conversation history.'),
+});
+type RouteUserPromptInput = z.infer<typeof RouteUserPromptInputSchema>;
+
+const RouteUserPromptOutputSchema = z.object({
+    type: z.enum(['text', 'image']),
+    result: z.any()
+});
+type RouteUserPromptOutput = z.infer<typeof RouteUserPromptOutputSchema>;
+
+
+export async function routeUserPrompt(input: RouteUserPromptInput): Promise<RouteUserPromptOutput> {
+  return routeUserPromptFlow(input);
+}
+
+
+const routeUserPromptFlow = ai.defineFlow(
+  {
+    name: 'routeUserPromptFlow',
+    inputSchema: RouteUserPromptInputSchema,
+    outputSchema: RouteUserPromptOutputSchema,
+  },
+  async (input) => {
+    // If images are attached, it's always an image task.
+    if (input.baseImageDataUris && input.baseImageDataUris.length > 0) {
+        const imageInput: GenerateImageFromPromptInput = {
+            promptText: input.prompt,
+            baseImages: input.baseImageDataUris.map(dataUri => ({ dataUri }))
+        };
+        const result = await generateImageFromPrompt(imageInput);
+        return { type: 'image', result };
+    }
+
+    // Otherwise, ask the model to classify the prompt.
+    const classificationPrompt = ai.definePrompt({
+        name: 'classifyPrompt',
+        input: { schema: z.object({ prompt: z.string() }) },
+        output: { schema: z.object({ task: z.enum(['image_generation', 'text_generation']) }) },
+        prompt: `Analyze the following user prompt and classify the primary task as either 'image_generation' or 'text_generation'.
+
+        User Prompt: "{{prompt}}"
+
+        If the prompt explicitly asks to "draw", "create an image", "generate a picture", or similar artistic commands, classify it as 'image_generation'.
+        For all other queries, including questions, requests for information, code, or text, classify it as 'text_generation'.
+
+        Respond with only the classification in JSON format.`,
+    });
+
+    const { output } = await classificationPrompt({ prompt: input.prompt });
+
+    if (output?.task === 'image_generation') {
+        const imageInput: GenerateImageFromPromptInput = { promptText: input.prompt };
+        const result = await generateImageFromPrompt(imageInput);
+        return { type: 'image', result };
+    } else {
+        const textInput: GenerateTextFromPromptInput = { 
+            prompt: input.prompt,
+            history: input.history || []
+        };
+        const result = await generateTextFromPrompt(textInput);
+        return { type: 'text', result };
+    }
+  }
+);

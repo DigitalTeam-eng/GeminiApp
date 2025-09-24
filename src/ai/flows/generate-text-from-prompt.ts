@@ -10,7 +10,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { Part } from '@genkit-ai/googleai';
 
 const HistoryMessageSchema = z.object({
   role: z.enum(['user', 'model']),

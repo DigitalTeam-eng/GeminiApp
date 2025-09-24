@@ -1,15 +1,28 @@
 'use server';
 
-import { generateImageFromPrompt, GenerateImageFromPromptInput } from '@/ai/flows/generate-image-from-prompt';
-import { generateTextFromPrompt, GenerateTextFromPromptInput, HistoryMessage } from '@/ai/flows/generate-text-from-prompt';
+import { routeUserPrompt } from '@/ai/flows/route-user-prompt';
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
+// Define types that were previously in the flow file
+const HistoryMessageSchema = z.object({
+  role: z.enum(['user', 'model']),
+  content: z.string(),
+});
+type HistoryMessage = z.infer<typeof HistoryMessageSchema>;
+
+const RouteUserPromptInputSchema = z.object({
+  prompt: z.string().describe('The user prompt to analyze and route.'),
+  baseImageDataUris: z.array(z.string()).optional().describe('Optional base images for image-to-image tasks.'),
+  history: z.array(z.any()).optional().describe('Conversation history.'),
+});
+type RouteUserPromptInput = z.infer<typeof RouteUserPromptInputSchema>;
+
+
 const formSchema = z.object({
   prompt: z.string().min(1, 'Prompt kan ikke være tom.'),
-  model: z.enum(['Pro', 'Flash', 'Flash-Lite', 'Image']),
   baseImageDataUris: z.array(z.string()).optional(),
-  history: z.array(z.any()).optional(), // Brug 'any' for at undgå at skulle definere skemaet her
+  history: z.array(z.any()).optional(),
 });
 
 type ResponseType = {
@@ -26,26 +39,22 @@ export async function generateResponse(
     return { error: 'Ugyldigt input.' };
   }
 
-  const { prompt, model, baseImageDataUris, history } = validatedFields.data;
+  const { prompt, baseImageDataUris, history } = validatedFields.data;
 
   try {
-    if (model === 'Image') {
-      const imageGenInput: GenerateImageFromPromptInput = { 
-        promptText: prompt,
-      };
-      if (baseImageDataUris && baseImageDataUris.length > 0) {
-        imageGenInput.baseImages = baseImageDataUris.map(dataUri => ({ dataUri }));
-      }
-      const result = await generateImageFromPrompt(imageGenInput);
-      return { data: result };
+    const routeInput: RouteUserPromptInput = {
+      prompt: prompt,
+      baseImageDataUris: baseImageDataUris,
+      history: (history as HistoryMessage[]) || [],
+    };
+    const result = await routeUserPrompt(routeInput);
+
+    if (result.type === 'image') {
+       return { data: { type: 'image', ...result.result } };
     } else {
-      const textGenInput: GenerateTextFromPromptInput = { 
-        prompt: prompt,
-        history: (history as HistoryMessage[]) || [],
-       };
-      const result = await generateTextFromPrompt(textGenInput);
-      return { data: result };
+       return { data: { type: 'text', ...result.result } };
     }
+    
   } catch (e: any) {
     console.error(e);
     return { error: e.message || 'Der opstod en uventet fejl.' };

@@ -12,7 +12,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ModelSelector } from './model-selector';
 import { PromptForm } from './prompt-form';
 import { ChatBubble } from './chat-bubble';
 import { ImageDisplay } from './image-display';
@@ -21,8 +20,6 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { UserImageDisplay } from './user-image-display';
 import type { HistoryMessage } from '@/ai/flows/generate-text-from-prompt';
 
-
-export type ModelType = 'Pro' | 'Flash' | 'Flash-Lite' | 'Image';
 
 export type Message = {
   role: 'user' | 'assistant';
@@ -46,7 +43,6 @@ interface GeminiStudioProps {
 
 
 export function GeminiStudio({ activeConversation, onNewConversation, onUpdateConversation }: GeminiStudioProps) {
-  const [model, setModel] = useState<ModelType>('Pro');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -105,19 +101,7 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
             currentConv = conversationWithUserMessage;
         }
 
-
-        let baseImageDataUris: string[] = filesDataUris || [];
-
-        if (baseImageDataUris.length === 0 && model === 'Image' && currentConv.messages.length > 1) {
-            const lastImageMessages = [...currentConv.messages].reverse().find(m => m.imageUrl || (m.baseImageUrls && m.baseImageUrls.length > 0));
-            if (lastImageMessages) {
-                if (lastImageMessages.imageUrl) {
-                    baseImageDataUris = [lastImageMessages.imageUrl];
-                } else if (lastImageMessages.baseImageUrls) {
-                    baseImageDataUris = lastImageMessages.baseImageUrls;
-                }
-            }
-        }
+        const baseImageDataUris: string[] = filesDataUris || [];
 
         // Prepare history for the AI model
         const history: HistoryMessage[] = currentConv.messages
@@ -127,14 +111,14 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
             content: msg.content ?? '',
           }));
         
-        const result = await generateResponse({ prompt: prompt || '', model, baseImageDataUris: baseImageDataUris, history });
+        const result = await generateResponse({ prompt: prompt || '', baseImageDataUris: baseImageDataUris, history });
 
         if (result.error) {
             throw new Error(result.error);
         }
 
         let assistantMessage: Message;
-        if (model === 'Image') {
+        if (result.data.type === 'image') {
             assistantMessage = {
                 role: 'assistant',
                 imageUrl: result.data.imageDataUri,
@@ -221,8 +205,6 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
       </div>
       <div className="p-4 md:p-6 border-t bg-background shrink-0">
         <div className="max-w-3xl mx-auto">
-            <ModelSelector value={model} onValueChange={(val) => setModel(val as ModelType)} />
-            <div className='h-4' />
             <PromptForm onSubmit={handleSubmit} isLoading={isLoading} />
             <p className='text-xs text-muted-foreground mt-2'>
                 Tryk Shift+Enter for at lave et linjeskift.
