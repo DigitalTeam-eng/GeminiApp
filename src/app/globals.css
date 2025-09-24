@@ -86,3 +86,13 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Give code blocks a bit more space */
+.prose pre {
+    @apply my-4;
+}
+
+/* Remove padding from the div that react-syntax-highlighter adds */
+.prose pre > div {
+    @apply p-0;
+}
