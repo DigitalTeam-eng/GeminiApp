@@ -74,6 +74,12 @@ const generateImageFromPromptFlow = ai.defineFlow(
       
       config = {
         responseModalities: ['TEXT', 'IMAGE'],
+        safetySettings: [
+            {
+                category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+                threshold: 'BLOCK_ONLY_HIGH',
+            },
+        ],
       };
     } else {
       // Text-to-image generation
