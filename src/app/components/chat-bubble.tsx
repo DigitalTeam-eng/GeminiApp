@@ -1,9 +1,11 @@
+
 'use client';
 
+import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Download } from 'lucide-react';
+import { Copy, Check } from 'lucide-react';
 import { FormattedContent } from './formatted-content';
 
 interface ChatBubbleProps {
@@ -12,19 +14,15 @@ interface ChatBubbleProps {
 }
 
 export function ChatBubble({ role, content }: ChatBubbleProps) {
+  const [isCopied, setIsCopied] = useState(false);
   const isUser = role === 'user';
   const isAssistant = role === 'assistant';
 
-  const handleDownload = () => {
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `gemini-svar.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(content).then(() => {
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000); // Reset icon after 2 seconds
+    });
   };
 
   return (
@@ -52,13 +50,13 @@ export function ChatBubble({ role, content }: ChatBubbleProps) {
         )}
         {isAssistant && (
            <Button
-              onClick={handleDownload}
+              onClick={handleCopy}
               size="icon"
               variant="ghost"
               className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-              aria-label="Download svar"
+              aria-label="Kopier indhold"
             >
-              <Download className="h-4 w-4" />
+              {isCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
             </Button>
         )}
       </div>
