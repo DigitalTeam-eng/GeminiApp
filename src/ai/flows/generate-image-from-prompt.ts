@@ -60,12 +60,23 @@ const generateImageFromPromptFlow = ai.defineFlow(
     let modelToUse: string;
     let promptForModel: (string | Part)[] | string;
     let config: any = {};
+    let finalPromptText = input.promptText;
 
     if (input.baseImages && input.baseImages.length > 0) {
       // Image-to-image generation
       modelToUse = 'googleai/gemini-2.5-flash-image-preview'; // "Nano Banana"
       
-      const promptParts: Part[] = [{ text: input.promptText }];
+      // Check for transparency keywords and adjust the prompt
+      const transparencyKeywords = ['transparent', 'gennemsigtig', 'remove background'];
+      const requiresTransparency = transparencyKeywords.some(keyword =>
+        input.promptText.toLowerCase().includes(keyword)
+      );
+
+      if (requiresTransparency) {
+        finalPromptText = "Isolate the main subject and make the background solid black. Only the main subject should be visible.";
+      }
+
+      const promptParts: Part[] = [{ text: finalPromptText }];
       input.baseImages.forEach(image => {
         promptParts.push({ media: { url: image.dataUri } });
       });
