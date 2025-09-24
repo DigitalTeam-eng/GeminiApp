@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
+import { FormattedContent } from './formatted-content';
 
 interface ChatBubbleProps {
   role: 'user' | 'assistant';
@@ -40,11 +41,15 @@ export function ChatBubble({ role, content }: ChatBubbleProps) {
         )}
       <div
         className={cn(
-          'relative max-w-[80%] rounded-2xl p-4',
+          'relative max-w-[80%] rounded-2xl p-4 prose dark:prose-invert prose-p:my-0',
           isUser ? 'bg-primary text-primary-foreground' : 'bg-card'
         )}
       >
-        <p className="whitespace-pre-wrap text-sm">{content}</p>
+        {isAssistant ? (
+            <FormattedContent content={content} />
+        ) : (
+            <p className="whitespace-pre-wrap text-sm">{content}</p>
+        )}
         {isAssistant && (
            <Button
               onClick={handleDownload}
