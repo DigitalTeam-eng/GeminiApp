@@ -99,7 +99,7 @@ const generateImageFromPromptFlow = ai.defineFlow(
 
         // Step 2: Use the mask to create the transparent image
         const finalPromptParts: Part[] = [
-          { text: "Using the provided mask, make the background of the original image transparent. Output a PNG with an alpha channel." },
+          { text: "Using the provided mask, replace the background of the original image with an alpha channel to make it transparent. The output must be a PNG file with a true alpha channel." },
         ];
          input.baseImages.forEach(image => { // Original image
             finalPromptParts.push({ media: { url: image.dataUri } });
