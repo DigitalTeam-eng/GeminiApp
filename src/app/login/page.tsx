@@ -36,21 +36,9 @@ export default function LoginPage() {
         return;
     }
     
-    const tenantId = process.env.NEXT_PUBLIC_AZURE_AD_TENANT_ID;
-    if (!tenantId) {
-        console.error("Azure AD Tenant ID is not configured in environment variables.");
-        toast({
-            variant: 'destructive',
-            title: 'Konfigurationsfejl',
-            description: 'Azure AD Tenant ID mangler. Kontakt venligst support.',
-        });
-        return;
-    }
-
     const provider = new OAuthProvider(`microsoft.com`);
-    // This is crucial for single-tenant applications.
     provider.setCustomParameters({
-      tenant: tenantId,
+      tenant: 'sn.dk',
     });
 
 

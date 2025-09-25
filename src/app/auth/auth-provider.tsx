@@ -8,7 +8,7 @@ import {
   useState,
   ReactNode,
 } from 'react';
-import { onAuthStateChanged, User, signOut, Auth } from 'firebase/auth';
+import { onAuthStateChanged, User, signOut, getRedirectResult } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -38,19 +38,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setLoading(false);
         return;
     }
+    
+    // First, check for redirect result. This is crucial for the redirect flow.
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result) {
+          // User successfully signed in.
+          // onAuthStateChanged will handle setting the user.
+        }
+      })
+      .catch((error) => {
+        console.error("Error during getRedirectResult:", error);
+        toast({
+          variant: 'destructive',
+          title: 'Login Fejl',
+          description: 'Kunne ikke verificere login efter omdirigering.',
+        });
+      })
+      .finally(() => {
+         // Now, set up the persistent state listener.
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setUser(user);
+            setLoading(false);
+        });
+        // Cleanup subscription on unmount
+        return () => unsubscribe();
+      });
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
   }, []);
 
   const logout = async () => {
     const auth = getFirebaseAuth();
     if (auth) {
         await signOut(auth);
+        toast({
+            title: 'Logget ud',
+            description: 'Du er nu logget ud.',
+        });
         router.push('/login');
     }
   };
