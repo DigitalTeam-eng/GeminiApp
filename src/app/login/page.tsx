@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect } from 'react';
@@ -8,7 +7,7 @@ import {
   OAuthProvider,
 } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
-import { useAuth } from '@/app/auth/auth-provider';
+import { useAuth } from '@/app/auth/client-auth-provider';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 

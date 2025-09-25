@@ -1,4 +1,3 @@
-
 'use client';
 
 import { GeminiStudio, Conversation, Message } from '@/app/components/gemini-studio';
@@ -35,7 +34,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { generateConversationTitle } from '@/app/actions';
-import { useAuth } from '@/app/auth/auth-provider';
+import { useAuth } from '@/app/auth/client-auth-provider';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
