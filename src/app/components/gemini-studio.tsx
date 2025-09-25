@@ -90,7 +90,14 @@ export function GeminiStudio({ activeConversation, onNewConversation, onUpdateCo
         if (!currentConv) {
             const newConv = await onNewConversation(prompt || `Billede: ${files[0]?.name || '...'}`, userMessage);
             if (!newConv) {
-                throw new Error("Samtale kunne ikke oprettes.");
+                // Do not throw error, just show toast and stop loading
+                toast({
+                    variant: 'destructive',
+                    title: 'Fejl',
+                    description: "Samtale kunne ikke oprettes.",
+                });
+                setIsLoading(false);
+                return;
             }
             currentConv = newConv; // Use the newly created conversation
         } else {
