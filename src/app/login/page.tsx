@@ -4,9 +4,8 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  signInWithRedirect,
+  signInWithPopup,
   OAuthProvider,
-  getRedirectResult,
 } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
 import { useAuth } from '@/app/auth/auth-provider';
@@ -25,29 +24,6 @@ export default function LoginPage() {
     }
   }, [user, loading, router]);
   
-  // Handle the redirect result from Microsoft
-  useEffect(() => {
-    const auth = getFirebaseAuth();
-    if (!auth) return;
-    
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result) {
-          // User is signed in.
-          router.push('/');
-        }
-      })
-      .catch((error) => {
-        console.error('Error during redirect result:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Login Fejl',
-          description: error.message || 'Der opstod en fejl under login.',
-        });
-      });
-  }, [router, toast]);
-
-
   const handleLogin = async () => {
     const auth = getFirebaseAuth();
     if (!auth) {
@@ -66,7 +42,13 @@ export default function LoginPage() {
     });
 
     try {
-      await signInWithRedirect(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      // User is signed in.
+      if (result.user) {
+        router.push('/');
+      } else {
+        throw new Error("Login lykkedes, men ingen bruger blev fundet.");
+      }
     } catch (error: any) {
       console.error('Error during sign-in:', error);
       toast({
@@ -101,5 +83,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-    
