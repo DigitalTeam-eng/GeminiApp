@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  signInWithRedirect,
+  signInWithPopup,
   OAuthProvider,
   getRedirectResult,
 } from 'firebase/auth';
@@ -23,25 +23,29 @@ export default function LoginPage() {
       router.push('/');
     }
   }, [user, loading, router]);
-  
-  // Check for redirect result
+
+  // Handle redirect result just in case
   useEffect(() => {
     const auth = getFirebaseAuth();
     if (!auth) return;
 
     getRedirectResult(auth)
       .then((result) => {
-        if (result && result.user) {
-          // User is signed in.
+        if (result) {
+          // User successfully signed in.
+          toast({
+            title: 'Login succesfuld',
+            description: `Velkommen, ${result.user.displayName}`,
+          });
           router.push('/');
         }
       })
       .catch((error) => {
-        console.error('Error during redirect result:', error);
+        console.error('Error handling redirect result:', error);
         toast({
-            variant: 'destructive',
-            title: 'Login Fejl',
-            description: error.message || 'Der opstod en fejl under login.',
+          variant: 'destructive',
+          title: 'Login Fejl',
+          description: error.message || 'Der opstod en fejl under omdirigering.',
         });
       });
   }, [router, toast]);
@@ -65,7 +69,15 @@ export default function LoginPage() {
     });
 
     try {
-      await signInWithRedirect(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      // This gives you a Microsoft Access Token. You can use it to access the Microsoft Graph API.
+      // const credential = OAuthProvider.credentialFromResult(result);
+      // const accessToken = credential.accessToken;
+      toast({
+        title: 'Login succesfuld',
+        description: `Velkommen, ${result.user.displayName}`,
+      });
+      router.push('/');
     } catch (error: any) {
       console.error('Error during sign-in:', error);
       toast({
