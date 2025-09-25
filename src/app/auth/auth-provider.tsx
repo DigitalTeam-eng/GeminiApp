@@ -8,7 +8,7 @@ import {
   useState,
   ReactNode,
 } from 'react';
-import { onAuthStateChanged, User, signOut, Auth, getRedirectResult } from 'firebase/auth';
+import { onAuthStateChanged, User, signOut, Auth } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -40,18 +40,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // For now, we just stop loading and the protected routes will redirect to login.
         return;
     }
-
-    // This handles the redirect result on initial load
-    getRedirectResult(auth)
-      .catch((error) => {
-        // Handle errors here.
-        console.error("Error from getRedirectResult:", error);
-        toast({
-            variant: 'destructive',
-            title: 'Login Fejl',
-            description: error.message || 'Der opstod en fejl under login-omdirigering.',
-        });
-      });
 
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);

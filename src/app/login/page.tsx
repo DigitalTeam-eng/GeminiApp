@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -24,33 +25,6 @@ export default function LoginPage() {
     }
   }, [user, loading, router]);
 
-  // Handle redirect result just in case
-  useEffect(() => {
-    const auth = getFirebaseAuth();
-    if (!auth) return;
-
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result) {
-          // User successfully signed in.
-          toast({
-            title: 'Login succesfuld',
-            description: `Velkommen, ${result.user.displayName}`,
-          });
-          router.push('/');
-        }
-      })
-      .catch((error) => {
-        console.error('Error handling redirect result:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Login Fejl',
-          description: error.message || 'Der opstod en fejl under omdirigering.',
-        });
-      });
-  }, [router, toast]);
-
-
   const handleLogin = async () => {
     const auth = getFirebaseAuth();
     if (!auth) {
@@ -62,17 +36,27 @@ export default function LoginPage() {
         });
         return;
     }
+    
+    const tenantId = process.env.NEXT_PUBLIC_AZURE_AD_TENANT_ID;
+    if (!tenantId) {
+        console.error("Azure AD Tenant ID is not configured in environment variables.");
+        toast({
+            variant: 'destructive',
+            title: 'Konfigurationsfejl',
+            description: 'Azure AD Tenant ID mangler. Kontakt venligst support.',
+        });
+        return;
+    }
+
     const provider = new OAuthProvider('microsoft.com');
-    // Important for multi-tenant applications to target a specific organization
+    // This is crucial for single-tenant applications.
     provider.setCustomParameters({
-      tenant: 'sn.dk',
+      tenant: tenantId,
     });
+
 
     try {
       const result = await signInWithPopup(auth, provider);
-      // This gives you a Microsoft Access Token. You can use it to access the Microsoft Graph API.
-      // const credential = OAuthProvider.credentialFromResult(result);
-      // const accessToken = credential.accessToken;
       toast({
         title: 'Login succesfuld',
         description: `Velkommen, ${result.user.displayName}`,
