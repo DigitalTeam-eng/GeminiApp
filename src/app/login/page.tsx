@@ -4,9 +4,8 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  signInWithPopup,
+  signInWithRedirect,
   OAuthProvider,
-  getRedirectResult,
 } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
 import { useAuth } from '@/app/auth/auth-provider';
@@ -48,7 +47,7 @@ export default function LoginPage() {
         return;
     }
 
-    const provider = new OAuthProvider('microsoft.com');
+    const provider = new OAuthProvider(`microsoft.com`);
     // This is crucial for single-tenant applications.
     provider.setCustomParameters({
       tenant: tenantId,
@@ -56,12 +55,7 @@ export default function LoginPage() {
 
 
     try {
-      const result = await signInWithPopup(auth, provider);
-      toast({
-        title: 'Login succesfuld',
-        description: `Velkommen, ${result.user.displayName}`,
-      });
-      router.push('/');
+      await signInWithRedirect(auth, provider);
     } catch (error: any) {
       console.error('Error during sign-in:', error);
       toast({
