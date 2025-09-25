@@ -37,7 +37,7 @@ import { Input } from '@/components/ui/input';
 import { generateConversationTitle } from '@/app/actions';
 import { useAuth } from '@/app/auth/auth-provider';
 import { useRouter } from 'next/navigation';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
 const initialConversations: Conversation[] = [
@@ -205,11 +205,8 @@ export default function Home() {
         <SidebarFooter className="p-2">
             <div className="flex items-center gap-3 p-2 rounded-md bg-card">
                  <Avatar className="h-9 w-9">
-                     {user.photoURL ? (
-                        <Image src={user.photoURL} alt={user.displayName || 'Bruger'} width={36} height={36} />
-                     ) : (
-                        <AvatarFallback>{user.displayName?.charAt(0) || 'B'}</AvatarFallback>
-                     )}
+                     {user.photoURL && <AvatarImage src={user.photoURL} alt={user.displayName || 'Bruger'} />}
+                     <AvatarFallback>{user.displayName?.charAt(0) || 'B'}</AvatarFallback>
                 </Avatar>
                 <div className='flex-1 overflow-hidden'>
                     <p className='text-sm font-semibold truncate'>{user.displayName}</p>
@@ -246,3 +243,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
