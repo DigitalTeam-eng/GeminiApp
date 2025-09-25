@@ -66,7 +66,7 @@ export default function LoginPage() {
     }
   };
 
-  if (loading || user) {
+  if (loading || (!loading && user)) {
      return (
       <div className="flex h-screen w-full items-center justify-center">
         <p>Indlæser...</p>
@@ -83,7 +83,7 @@ export default function LoginPage() {
             Log ind med din Microsoft-konto for at fortsætte.
           </p>
         </div>
-        <Button onClick={handleLogin} disabled={loading}>
+        <Button onClick={handleLogin}>
           Login med Microsoft
         </Button>
       </div>

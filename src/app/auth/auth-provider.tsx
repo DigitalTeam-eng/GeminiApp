@@ -36,8 +36,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!auth) {
         console.error("Firebase Auth is not available. Check your configuration.");
         setLoading(false);
-        // We are in an unconfigured state, maybe redirect to an error page or show a message.
-        // For now, we just stop loading and the protected routes will redirect to login.
         return;
     }
 
@@ -47,7 +45,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => unsubscribe();
-  }, [router, toast]);
+  }, []);
 
   const logout = async () => {
     const auth = getFirebaseAuth();
