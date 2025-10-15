@@ -1,3 +1,4 @@
+
 'use client';
 
 import { GeminiStudio, Conversation, Message } from '@/app/components/gemini-studio';
@@ -14,8 +15,8 @@ import {
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
-import { MoreHorizontal, Plus, Trash2, LogOut } from 'lucide-react';
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { MoreHorizontal, Plus, Trash2 } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,9 +35,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { generateConversationTitle } from '@/app/actions';
-import { useAuth } from '@/app/auth/client-auth-provider';
-import { useRouter } from 'next/navigation';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
 const initialConversations: Conversation[] = [
@@ -50,15 +48,6 @@ export default function Home() {
   const [renamingConversationId, setRenamingConversationId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState('');
   const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null);
-
-  const { user, loading, logout } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
 
   const activeConversation = useMemo(
     () => conversations.find(c => c.id === activeConversationId) ?? null,
@@ -126,13 +115,6 @@ export default function Home() {
     }
   };
 
-  if (loading || !user) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <p>Indlæser...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="h-screen w-full flex">
@@ -202,19 +184,7 @@ export default function Home() {
             </div>
         </SidebarContent>
         <SidebarFooter className="p-2">
-            <div className="flex items-center gap-3 p-2 rounded-md bg-card">
-                 <Avatar className="h-9 w-9">
-                     {user.photoURL && <AvatarImage src={user.photoURL} alt={user.displayName || 'Bruger'} />}
-                     <AvatarFallback>{user.displayName?.charAt(0) || 'B'}</AvatarFallback>
-                </Avatar>
-                <div className='flex-1 overflow-hidden'>
-                    <p className='text-sm font-semibold truncate'>{user.displayName}</p>
-                    <p className='text-xs text-muted-foreground truncate'>{user.email}</p>
-                </div>
-                <Button variant="ghost" size="icon" onClick={logout} className="h-8 w-8">
-                    <LogOut className="h-4 w-4" />
-                </Button>
-            </div>
+            
         </SidebarFooter>
       </Sidebar>
       <main className="flex flex-col flex-1">
