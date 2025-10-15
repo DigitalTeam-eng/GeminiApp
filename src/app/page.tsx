@@ -19,6 +19,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { GeminiStudio } from '@/app/components/gemini-studio';
+import NextImage from 'next/image';
 
 // Define a simple Microsoft icon component
 const MicrosoftIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -141,7 +142,7 @@ export default function Home() {
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Card className="w-[350px]">
           <CardHeader className="items-center text-center">
-            <Image
+            <NextImage
                 src="https://firebasestorage.googleapis.com/v0/b/marketplan-canvas.firebasestorage.app/o/Sj%C3%A6llandske_Nyheder_Bred_RGB_ny.png?alt=media&token=a37e81ab-1d4b-4913-bab2-c35a5fda6056"
                 alt="Sjællandske Medier logo"
                 width={200}
@@ -169,15 +170,10 @@ export default function Home() {
 
   // User is logged in and verified
   return (
-    <div className="h-screen w-full flex">
-        <main className="flex flex-col flex-1">
-            {/* The main chat component will go here */}
-             <GeminiStudio
-                activeConversation={null}
-                onNewConversation={async () => null}
-                onUpdateConversation={() => {}}
-            />
-        </main>
-    </div>
+    <GeminiStudio
+        activeConversation={null}
+        onNewConversation={async () => null}
+        onUpdateConversation={() => {}}
+    />
   );
 }
