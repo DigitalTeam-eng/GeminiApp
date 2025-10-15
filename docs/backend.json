@@ -1,0 +1,62 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the Gemini Studio application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        },
+        "azureTenantId": {
+          "type": "string",
+          "description": "The Azure AD tenant ID to which the user belongs. Used to restrict logins to a specific organization."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The display name of the user."
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "azureTenantId",
+        "displayName"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user data, including email, Azure Tenant ID, and display name. The azureTenantId is denormalized to enable authorization independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to store user data securely and efficiently, supporting the Gemini Studio application's requirements. Given the user's instruction to implement the MS login function described in another project. The structure focuses on storing user information obtained during the Microsoft login flow. The structure avoids hierarchical authorization dependencies. The design enables secure `list` operations by segregating user data based on ID, enabling easy management and security rule definition.\n\nThe key element for authorization independence is storing the Azure Tenant ID within the user document itself. This design avoids needing to fetch tenant information from a separate location to validate user access. Instead the security rules can directly check the `azureTenantId` stored in the user document.\n\nThe design facilitates secure `list` operations because user data is stored under a dedicated path (`/users/{userId}`).  Security rules can easily restrict listing to authenticated users without needing to filter data based on its contents. The design enforces that each document in the `/users` collection adheres to the same security rules."
+  }
+}

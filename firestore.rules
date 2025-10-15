@@ -1,0 +1,74 @@
+/**
+ * @file Firebase Security Rules for Gemini Studio application.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for all user data stored in Firestore.
+ * Each user can only access their own data, and no listing of all users is allowed.
+ *
+ * Data Structure:
+ * All user data is stored under the `/users/{userId}` path. Each document contains user-specific information,
+ * including their email, Azure Tenant ID, and display name.
+ *
+ * Key Security Decisions:
+ * - User listing is explicitly disallowed to protect user privacy.
+ * - The Azure Tenant ID is denormalized into the user document to enable efficient authorization
+ *   without additional reads.
+ * - All write operations are restricted to the owner of the data, ensuring that users can only
+ *   modify their own information.
+ *
+ * Denormalization for Authorization:
+ * The `azureTenantId` is stored directly within the `/users/{userId}` document to allow for
+ * fast and simple authorization checks. This avoids the need to perform additional reads to
+ * verify the user's tenant.
+ *
+ * Structural Segregation:
+ * All user data is stored under the `/users/{userId}` path, ensuring that each user's data is
+ * isolated and can be secured independently.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Enforces access control for user documents.
+     * @path /users/{userId}
+     * @allow (create) - Authenticated user can create their own user document if the userId matches their auth.uid.
+     * @allow (get, update, delete) - Authenticated user can get, update, or delete their own user document if the userId matches their auth.uid.
+     * @deny (create) - If the userId does not match the authenticated user's uid.
+     * @deny (get, update, delete) - If the userId does not match the authenticated user's uid.
+     * @deny (list) - Listing users is not allowed.
+     * @principle Enforces document ownership for all operations and validates relational integrity between the path and document data.
+     */
+    match /users/{userId} {
+      // Helper function to check if the user is signed in
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      // Helper function to check if the user is the owner of the document
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      // Helper function to check if the user is the existing owner of the document
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      // Allow create if the user is signed in and the userId matches the authenticated user's uid
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
+
+      // Allow get if the user is the owner
+      allow get: if isOwner(userId);
+
+      // Allow update if the user is the existing owner and the user id matches. Also enforce immutability for userId.
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+
+      // Allow delete if the user is the existing owner
+      allow delete: if isExistingOwner(userId);
+
+      // Prevent listing of all users
+      allow list: if false;
+    }
+  }
+}
