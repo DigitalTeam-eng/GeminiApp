@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useUser, useAuth } from '@/firebase';
 import {
-  signInWithRedirect,
+  signInWithPopup,
   OAuthProvider,
   getRedirectResult,
 } from 'firebase/auth';
@@ -89,11 +89,11 @@ export default function Home() {
 
       })
       .catch((error) => {
-        console.error('Login Fejl:', error);
+        console.error('Redirect Result Error:', error);
         toast({
           variant: 'destructive',
           title: 'Login Fejl',
-          description: 'Der opstod en fejl under login. Prøv venligst igen.',
+          description: `Der opstod en fejl efter omdirigering: ${error.message}`,
         });
       })
       .finally(() => {
@@ -101,7 +101,7 @@ export default function Home() {
       });
   }, [isUserLoading, user, auth, toast, requiredTenantId]);
 
-  const loginWithMicrosoft = () => {
+  const loginWithMicrosoft = async () => {
     if (!requiredTenantId) {
       toast({
         variant: 'destructive',
@@ -116,7 +116,31 @@ export default function Home() {
     provider.setCustomParameters({
       tenant: requiredTenantId,
     });
-    signInWithRedirect(auth, provider);
+    
+    try {
+        const result = await signInWithPopup(auth, provider);
+        // Successful login is handled by the onAuthStateChanged listener,
+        // but we can do immediate validation here as well.
+        const userEmail = result.user.email;
+        const tenantId = result.user.tenantId;
+
+        if (!userEmail || !userEmail.endsWith(requiredDomain)) {
+          throw new Error(`Login er kun tilladt for brugere med en ${requiredDomain} e-mailadresse.`);
+        }
+        if (tenantId !== requiredTenantId) {
+          throw new Error(`Forkert organisation. Du er logget ind med et forkert Microsoft tenant.`);
+        }
+
+    } catch (error: any) {
+        console.error("Popup Login Fejl:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Login Fejl',
+            description: `Fejlkode: ${error.code}\n\nFejlbesked: ${error.message}`,
+            duration: 10000, // Vis toast i 10 sekunder
+        });
+        auth.signOut();
+    }
   };
 
   if (isUserLoading || isVerifying) {
