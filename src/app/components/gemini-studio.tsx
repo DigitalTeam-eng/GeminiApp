@@ -29,6 +29,7 @@ import {
   SidebarMenuButton,
   SidebarMenuAction,
   SidebarFooter,
+  SidebarProvider,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
@@ -262,169 +263,171 @@ export function GeminiStudio({ }: GeminiStudioProps) {
 
 
   return (
-    <div className="h-screen w-full flex">
-    <Sidebar side="left" variant="sidebar" collapsible="offcanvas">
-      <SidebarHeader>
-          <div className="flex items-center gap-2">
-               <Image
-                  src="https://firebasestorage.googleapis.com/v0/b/marketplan-canvas.firebasestorage.app/o/Sj%C3%A6llandske_Nyheder_Bred_RGB_ny.png?alt=media&token=a37e81ab-1d4b-4913-bab2-c35a5fda6056"
-                  alt="Sjællandske Medier logo"
-                  width={150}
-                  height={37}
-                  priority
-              />
-              <SidebarTrigger className="ml-auto" />
-          </div>
-      </SidebarHeader>
-      <SidebarContent className="p-2 flex flex-col">
-          <Button variant="outline" className='w-full justify-start' onClick={() => setActiveConversationId(null)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Ny samtale
-          </Button>
-          <div className='flex-1 mt-4 overflow-y-auto'>
-              <p className='text-sm text-muted-foreground px-2'>Historik</p>
-              <SidebarMenu>
-                  {conversations.map(conv => (
-                      <SidebarMenuItem key={conv.id}>
-                          {renamingConversationId === conv.id ? (
-                              <form onSubmit={handleRename} className="p-2">
-                                  <Input 
-                                      value={newTitle}
-                                      onChange={(e) => setNewTitle(e.target.value)}
-                                      onBlur={() => setRenamingConversationId(null)}
-                                      autoFocus
-                                      className="h-8"
-                                  />
-                              </form>
-                          ) : (
-                              <SidebarMenuButton 
-                                  tooltip={conv.title} 
-                                  isActive={conv.id === activeConversationId}
-                                  onClick={() => handleSelectConversation(conv.id)}
-                              >
-                                  {conv.title}
-                              </SidebarMenuButton>
-                          )}
-                           <SidebarMenuAction showOnHover>
-                              <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="icon" className="h-6 w-6">
-                                          <MoreHorizontal className="h-4 w-4" />
-                                      </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent>
-                                      <DropdownMenuItem onClick={() => startRename(conv)}>
-                                          Omdøb
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => setDeletingConversationId(conv.id)} className="text-destructive">
-                                          <Trash2 className="mr-2 h-4 w-4" />
-                                          Slet
-                                      </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                              </DropdownMenu>
-                          </SidebarMenuAction>
-                      </SidebarMenuItem>
-                  ))}
-              </SidebarMenu>
-          </div>
-      </SidebarContent>
-      <SidebarFooter className="p-2 border-t">
-            <div className="flex items-center gap-3">
-                <Avatar className="h-8 w-8">
-                    <AvatarImage src={user?.photoURL ?? undefined} />
-                    <AvatarFallback>{user?.displayName?.charAt(0) ?? 'U'}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 overflow-hidden">
-                    <p className="text-sm font-medium truncate">{user?.displayName}</p>
-                    <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
-                </div>
-                <Button variant="ghost" size="icon" onClick={() => auth.signOut()}>
-                    <LogOut className="h-4 w-4" />
-                </Button>
+    <SidebarProvider>
+      <div className="h-screen w-full flex">
+      <Sidebar side="left" variant="sidebar" collapsible="offcanvas">
+        <SidebarHeader>
+            <div className="flex items-center gap-2">
+                 <Image
+                    src="https://firebasestorage.googleapis.com/v0/b/marketplan-canvas.firebasestorage.app/o/Sj%C3%A6llandske_Nyheder_Bred_RGB_ny.png?alt=media&token=a37e81ab-1d4b-4913-bab2-c35a5fda6056"
+                    alt="Sjællandske Medier logo"
+                    width={150}
+                    height={37}
+                    priority
+                />
+                <SidebarTrigger className="ml-auto" />
             </div>
-      </SidebarFooter>
-    </Sidebar>
-    <main className="flex flex-col flex-1">
-       <div className='flex flex-col h-full bg-card'>
-       <header className="flex items-center gap-4 p-4 border-b shrink-0">
-        <SidebarTrigger className="md:hidden" />
-        <h1 className="text-xl font-bold">Gemini Studie</h1>
-      </header>
-      <div className='flex-1 overflow-y-auto'>
-          <ScrollArea className="h-full" viewportRef={viewportRef}>
-          <div className="space-y-4 max-w-3xl mx-auto p-4 md:p-6">
-            {(activeConversation?.messages ?? []).length === 0 && (
-                 <div className="flex items-center justify-center h-full">
-                    <p className="text-muted-foreground">
-                        Indtast en prompt nedenfor for at starte samtalen.
-                    </p>
-                </div>
-            )}
-            {(activeConversation?.messages ?? []).map((message, index) => {
-              if (message.role === 'user') {
-                return (message.baseImageUrls && message.baseImageUrls.length > 0) ? (
-                    <UserImageDisplay 
-                        key={index}
-                        srcs={message.baseImageUrls}
-                        prompt={message.content ?? ''}
-                    />
-                ) : (
-                    <ChatBubble
-                        key={index}
-                        role={message.role}
-                        content={message.content ?? ''}
-                    />
-                );
-              }
+        </SidebarHeader>
+        <SidebarContent className="p-2 flex flex-col">
+            <Button variant="outline" className='w-full justify-start' onClick={() => setActiveConversationId(null)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Ny samtale
+            </Button>
+            <div className='flex-1 mt-4 overflow-y-auto'>
+                <p className='text-sm text-muted-foreground px-2'>Historik</p>
+                <SidebarMenu>
+                    {conversations.map(conv => (
+                        <SidebarMenuItem key={conv.id}>
+                            {renamingConversationId === conv.id ? (
+                                <form onSubmit={handleRename} className="p-2">
+                                    <Input 
+                                        value={newTitle}
+                                        onChange={(e) => setNewTitle(e.target.value)}
+                                        onBlur={() => setRenamingConversationId(null)}
+                                        autoFocus
+                                        className="h-8"
+                                    />
+                                </form>
+                            ) : (
+                                <SidebarMenuButton 
+                                    tooltip={conv.title} 
+                                    isActive={conv.id === activeConversationId}
+                                    onClick={() => handleSelectConversation(conv.id)}
+                                >
+                                    {conv.title}
+                                </SidebarMenuButton>
+                            )}
+                             <SidebarMenuAction showOnHover>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent>
+                                        <DropdownMenuItem onClick={() => startRename(conv)}>
+                                            Omdøb
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => setDeletingConversationId(conv.id)} className="text-destructive">
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            Slet
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </SidebarMenuAction>
+                        </SidebarMenuItem>
+                    ))}
+                </SidebarMenu>
+            </div>
+        </SidebarContent>
+        <SidebarFooter className="p-2 border-t">
+              <div className="flex items-center gap-3">
+                  <Avatar className="h-8 w-8">
+                      <AvatarImage src={user?.photoURL ?? undefined} />
+                      <AvatarFallback>{user?.displayName?.charAt(0) ?? 'U'}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 overflow-hidden">
+                      <p className="text-sm font-medium truncate">{user?.displayName}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => auth.signOut()}>
+                      <LogOut className="h-4 w-4" />
+                  </Button>
+              </div>
+        </SidebarFooter>
+      </Sidebar>
+      <main className="flex flex-col flex-1">
+         <div className='flex flex-col h-full bg-card'>
+         <header className="flex items-center gap-4 p-4 border-b shrink-0">
+          <SidebarTrigger className="md:hidden" />
+          <h1 className="text-xl font-bold">Gemini Studie</h1>
+        </header>
+        <div className='flex-1 overflow-y-auto'>
+            <ScrollArea className="h-full" viewportRef={viewportRef}>
+            <div className="space-y-4 max-w-3xl mx-auto p-4 md:p-6">
+              {(activeConversation?.messages ?? []).length === 0 && (
+                   <div className="flex items-center justify-center h-full">
+                      <p className="text-muted-foreground">
+                          Indtast en prompt nedenfor for at starte samtalen.
+                      </p>
+                  </div>
+              )}
+              {(activeConversation?.messages ?? []).map((message, index) => {
+                if (message.role === 'user') {
+                  return (message.baseImageUrls && message.baseImageUrls.length > 0) ? (
+                      <UserImageDisplay 
+                          key={index}
+                          srcs={message.baseImageUrls}
+                          prompt={message.content ?? ''}
+                      />
+                  ) : (
+                      <ChatBubble
+                          key={index}
+                          role={message.role}
+                          content={message.content ?? ''}
+                      />
+                  );
+                }
 
-              // Assistant message
-              return message.imageUrl ? (
-                <ImageDisplay
-                  key={index}
-                  src={message.imageUrl}
-                  prompt={message.prompt ?? 'Genereret billede'}
-                  model={message.model}
-                />
-              ) : (
-                <ChatBubble
-                  key={index}
-                  role={message.role}
-                  content={message.content ?? ''}
-                  model={message.model}
-                />
-              );
-            })}
-             {isLoading && (
-              <ChatBubble role="assistant" content="Tænker..." />
-            )}
+                // Assistant message
+                return message.imageUrl ? (
+                  <ImageDisplay
+                    key={index}
+                    src={message.imageUrl}
+                    prompt={message.prompt ?? 'Genereret billede'}
+                    model={message.model}
+                  />
+                ) : (
+                  <ChatBubble
+                    key={index}
+                    role={message.role}
+                    content={message.content ?? ''}
+                    model={message.model}
+                  />
+                );
+              })}
+               {isLoading && (
+                <ChatBubble role="assistant" content="Tænker..." />
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+        <div className="p-4 md:p-6 border-t bg-background shrink-0">
+          <div className="max-w-3xl mx-auto">
+              <PromptForm onSubmit={handleSubmit} isLoading={isLoading} />
+              <p className='text-xs text-muted-foreground mt-2'>
+                  Tryk Shift+Enter for at lave et linjeskift.
+              </p>
           </div>
-        </ScrollArea>
-      </div>
-      <div className="p-4 md:p-6 border-t bg-background shrink-0">
-        <div className="max-w-3xl mx-auto">
-            <PromptForm onSubmit={handleSubmit} isLoading={isLoading} />
-            <p className='text-xs text-muted-foreground mt-2'>
-                Tryk Shift+Enter for at lave et linjeskift.
-            </p>
         </div>
       </div>
-    </div>
-    </main>
+      </main>
 
-    <AlertDialog open={!!deletingConversationId} onOpenChange={(open) => !open && setDeletingConversationId(null)}>
-      <AlertDialogContent>
-          <AlertDialogHeader>
-              <AlertDialogTitle>Er du sikker?</AlertDialogTitle>
-              <AlertDialogDescription>
-                  Denne handling kan ikke fortrydes. Dette vil permanent slette din samtale.
-              </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-              <AlertDialogCancel>Annuller</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Slet</AlertDialogAction>
-          </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  </div>
+      <AlertDialog open={!!deletingConversationId} onOpenChange={(open) => !open && setDeletingConversationId(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Er du sikker?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Denne handling kan ikke fortrydes. Dette vil permanent slette din samtale.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Annuller</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Slet</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+    </SidebarProvider>
   );
 }
