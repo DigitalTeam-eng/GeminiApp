@@ -32,7 +32,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     if (auth) {
         await signOut(auth);
-        router.push('/login');
+        // Brugeren vil blive omdirigeret i `useEffect` i `page.tsx`
     }
   };
 

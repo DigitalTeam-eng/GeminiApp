@@ -6,11 +6,14 @@ import {
   signInWithRedirect,
   getRedirectResult,
   OAuthProvider,
+  Auth,
 } from 'firebase/auth';
-import { useAuth } from '@/app/auth/auth-provider';
+import { useAuth } from '@/app/auth/auth-provider'; // Vi bruger stadig denne til at tjekke om brugeren ER logget ind
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import NextImage from 'next/image';
+import { initializeFirebase } from '@/firebase';
+
 
 const MicrosoftIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -30,50 +33,29 @@ const MicrosoftIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, loading, auth } = useAuth();
+  const { user, loading } = useAuth(); // Bruges til at omdirigere HVIS brugeren allerede er logget ind
   const { toast } = useToast();
-  const [isVerifying, setIsVerifying] = useState(true);
+  const [authService, setAuthService] = useState<Auth | null>(null);
 
-  const requiredDomain = '@sn.dk';
-  const requiredTenantId = process.env.NEXT_PUBLIC_AZURE_AD_TENANT_ID;
-
+  // Initialiser Firebase auth service på klienten
   useEffect(() => {
-    if (!auth) return;
+    const { auth } = initializeFirebase();
+    setAuthService(auth);
 
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result) {
-          const userEmail = result.user.email;
-          const tenantId = result.user.tenantId;
-
-          if (!requiredTenantId) {
-             throw new Error('Azure AD Tenant ID (NEXT_PUBLIC_AZURE_AD_TENANT_ID) er ikke konfigureret i applikationen.');
-          }
-          if (!userEmail || !userEmail.endsWith(requiredDomain)) {
-            throw new Error(`Login er kun tilladt for brugere med en ${requiredDomain} e-mailadresse.`);
-          }
-          if (tenantId !== requiredTenantId) {
-            throw new Error(`Forkert organisation. Modtaget Tenant ID: ${tenantId}. Forventet Tenant ID: ${requiredTenantId}`);
-          }
-        }
-      })
-      .catch((error) => {
-        console.error("Redirect Login Fejl:", error);
-        toast({
-            variant: 'destructive',
-            title: 'Login Fejl',
-            description: `Fejlkode: ${error.code}\n\nFejlbesked: ${error.message}`,
-            duration: 10000,
-        });
-        if (auth) {
-          auth.signOut();
-        }
-      })
-      .finally(() => {
-        setIsVerifying(false);
+    // Håndter eventuelle fejl fra en redirect
+    getRedirectResult(auth).catch((error) => {
+      console.error("Login redirect error:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Login Fejl',
+        description: `Der opstod en fejl under login-processen. Fejlkode: ${error.code}`,
+        duration: 9000,
       });
-  }, [auth, requiredTenantId, toast]);
+    });
+
+  }, [toast]);
   
+  // Omdiriger til hovedsiden hvis brugeren er logget ind
   useEffect(() => {
     if (!loading && user) {
       router.push('/');
@@ -81,15 +63,16 @@ export default function LoginPage() {
   }, [user, loading, router]);
 
   const handleLogin = async () => {
-    if (!auth) {
-      console.error("Auth service is not available.");
+    if (!authService) {
       toast({
         variant: 'destructive',
-        title: 'Konfigurationsfejl',
-        description: 'Firebase auth-tjenesten er ikke tilgængelig.',
+        title: 'Fejl',
+        description: 'Auth-service er ikke klar. Prøv venligst igen om et øjeblik.',
       });
       return;
     }
+    
+    const requiredTenantId = process.env.NEXT_PUBLIC_AZURE_AD_TENANT_ID;
     if (!requiredTenantId) {
        toast({
         variant: 'destructive',
@@ -103,17 +86,20 @@ export default function LoginPage() {
     provider.setCustomParameters({
       tenant: requiredTenantId,
     });
-    await signInWithRedirect(auth, provider);
+    // Her starter redirect flowet
+    await signInWithRedirect(authService, provider);
   };
 
-  if (loading || isVerifying || user) {
+  // Viser en loading-skærm mens vi venter på at vide om brugeren er logget ind eller ej
+  if (loading || user) {
      return (
       <div className="flex h-screen w-full items-center justify-center">
-        <p>Omdirigerer og bekræfter...</p>
+        <p>Bekræfter login-status...</p>
       </div>
     );
   }
 
+  // Hvis vi ikke loader og der ikke er nogen bruger, vis login-siden.
   return (
     <div className="flex h-screen w-full items-center justify-center bg-background">
        <div className="mx-auto flex w-full max-w-[350px] flex-col justify-center gap-6 text-center">
@@ -129,7 +115,7 @@ export default function LoginPage() {
           <p className="text-sm text-muted-foreground">
             Log ind med din Microsoft-konto for at fortsætte.
           </p>
-        <Button onClick={handleLogin} disabled={loading}>
+        <Button onClick={handleLogin} disabled={!authService}>
            <MicrosoftIcon className="mr-2" />
           Login med Microsoft
         </Button>

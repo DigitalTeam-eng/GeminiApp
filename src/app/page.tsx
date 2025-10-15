@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useAuth } from '@/app/auth/auth-provider';
 import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,11 +13,13 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
+    // Hvis loading er færdig, og der ikke er nogen bruger, omdiriger til login
     if (!loading && !user) {
       router.push('/login');
     }
   }, [user, loading, router]);
 
+  // Mens vi tjekker auth-status, eller hvis der ikke er nogen bruger endnu, vis en loading-skærm
   if (loading || !user) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -25,7 +27,7 @@ export default function Home() {
           <CardHeader>
             <CardTitle>Indlæser...</CardTitle>
             <CardDescription>
-              Vent venligst, mens vi henter dine data.
+              Vent venligst, mens vi bekræfter din identitet.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -37,7 +39,7 @@ export default function Home() {
     );
   }
 
-  // User is logged in
+  // Hvis brugeren er logget ind, vis hovedapplikationen
   return (
     <GeminiStudio
       activeConversation={null}
