@@ -1,214 +1,183 @@
 
 'use client';
 
-import { GeminiStudio, Conversation, Message } from '@/app/components/gemini-studio';
+import { useEffect, useState } from 'react';
+import { useUser, useAuth } from '@/firebase';
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarTrigger,
-  SidebarMenuAction,
-  SidebarFooter,
-} from '@/components/ui/sidebar';
+  signInWithRedirect,
+  OAuthProvider,
+  getRedirectResult,
+} from 'firebase/auth';
 import { Button } from '@/components/ui/button';
-import Image from 'next/image';
-import { MoreHorizontal, Plus, Trash2 } from 'lucide-react';
-import { useState, useMemo, useCallback } from 'react';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Input } from '@/components/ui/input';
-import { generateConversationTitle } from '@/app/actions';
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
+import { GeminiStudio } from '@/app/components/gemini-studio';
 
-
-const initialConversations: Conversation[] = [
-    { id: '1', title: 'Labrador i solnedgang', messages: [{role: 'user', content: 'Tegn en labrador i en solnedgang'}] },
-    { id: '2', title: 'Tidligere samtale 2', messages: [{role: 'user', content: 'Hej med dig!'}] },
-];
+// Define a simple Microsoft icon component
+const MicrosoftIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    {...props}
+  >
+    <path fill="#f25022" d="M11.5 21.5h-9v-9h9z" />
+    <path fill="#00a4ef" d="M11.5 11.5h-9v-9h9z" />
+    <path fill="#7fba00" d="M21.5 21.5h-9v-9h9z" />
+    <path fill="#ffb900" d="M21.5 11.5h-9v-9h9z" />
+  </svg>
+);
 
 export default function Home() {
-  const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
-  const [renamingConversationId, setRenamingConversationId] = useState<string | null>(null);
-  const [newTitle, setNewTitle] = useState('');
-  const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null);
+  const { user, isUserLoading } = useUser();
+  const auth = useAuth();
+  const [isVerifying, setIsVerifying] = useState(true);
+  const { toast } = useToast();
 
-  const activeConversation = useMemo(
-    () => conversations.find(c => c.id === activeConversationId) ?? null,
-    [conversations, activeConversationId]
-  );
-  
-  const handleNewConversation = useCallback(async (prompt: string, initialMessage?: Message): Promise<Conversation | null> => {
-    if (!prompt.trim()) return null;
+  const requiredDomain = '@sn.dk';
+  const requiredTenantId = process.env.NEXT_PUBLIC_AZURE_AD_TENANT_ID;
 
-    try {
-        const newTitle = await generateConversationTitle({ prompt });
-        const newConversation: Conversation = {
-            id: Date.now().toString(),
-            title: newTitle,
-            messages: initialMessage ? [initialMessage] : [],
-        };
-        
-        setConversations(prev => [newConversation, ...prev]);
-        setActiveConversationId(newConversation.id);
-        
-        return newConversation;
-    } catch (error) {
-        console.error("Failed to create new conversation:", error);
-        return null;
+  useEffect(() => {
+    if (isUserLoading) {
+      // Still waiting for the initial auth state from onAuthStateChanged
+      return;
     }
-  }, []);
 
-  const handleUpdateConversation = (updatedConversation: Conversation) => {
-    setConversations(prev => {
-        const exists = prev.some(c => c.id === updatedConversation.id);
-        if (exists) {
-            return prev.map(c => c.id === updatedConversation.id ? updatedConversation : c);
+    if (user) {
+        // If there's already a user session, no need to verify again.
+        setIsVerifying(false);
+        return;
+    }
+
+    getRedirectResult(auth)
+      .then((result) => {
+        if (!result) {
+          setIsVerifying(false);
+          return;
         }
-        return [updatedConversation, ...prev];
+
+        const userEmail = result.user.email;
+        const tenantId = result.user.tenantId;
+
+        if (!userEmail || !userEmail.endsWith(requiredDomain)) {
+          toast({
+            variant: 'destructive',
+            title: 'Adgang nægtet',
+            description: `Login er kun tilladt for brugere med en ${requiredDomain} e-mailadresse.`,
+          });
+          auth.signOut();
+        } else if (tenantId !== requiredTenantId) {
+           toast({
+            variant: 'destructive',
+            title: 'Adgang nægtet',
+            description: 'Du er logget ind på den forkerte Microsoft-konto. Skift venligst.',
+          });
+          auth.signOut();
+        }
+        // If all checks pass, the user is implicitly allowed to proceed.
+        // The `user` state from `useUser` will be populated, and the UI will update.
+
+      })
+      .catch((error) => {
+        console.error('Login Fejl:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Login Fejl',
+          description: 'Der opstod en fejl under login. Prøv venligst igen.',
+        });
+      })
+      .finally(() => {
+        setIsVerifying(false);
+      });
+  }, [isUserLoading, user, auth, toast, requiredTenantId]);
+
+  const loginWithMicrosoft = () => {
+    if (!requiredTenantId) {
+      toast({
+        variant: 'destructive',
+        title: 'Konfigurationsfejl',
+        description:
+          'Azure AD Tenant ID er ikke konfigureret korrekt i applikationen.',
+      });
+      console.error('NEXT_PUBLIC_AZURE_AD_TENANT_ID is not set.');
+      return;
+    }
+    const provider = new OAuthProvider('microsoft.com');
+    provider.setCustomParameters({
+      tenant: requiredTenantId,
     });
+    signInWithRedirect(auth, provider);
   };
 
-  const handleSelectConversation = (id: string) => {
-    setActiveConversationId(id);
-  };
+  if (isUserLoading || isVerifying) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <Card className="w-[350px]">
+          <CardHeader>
+            <CardTitle>Bekræfter login...</CardTitle>
+            <CardDescription>
+              Vent venligst, mens vi tjekker dine oplysninger.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-6 w-3/4" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
-  const startRename = (conversation: Conversation) => {
-    setRenamingConversationId(conversation.id);
-    setNewTitle(conversation.title);
-  };
+  if (!user) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <Card className="w-[350px]">
+          <CardHeader className="items-center text-center">
+            <Image
+                src="https://firebasestorage.googleapis.com/v0/b/marketplan-canvas.firebasestorage.app/o/Sj%C3%A6llandske_Nyheder_Bred_RGB_ny.png?alt=media&token=a37e81ab-1d4b-4913-bab2-c35a5fda6056"
+                alt="Sjællandske Medier logo"
+                width={200}
+                height={50}
+                priority
+            />
+            <CardTitle className="pt-4">Gemini Studie</CardTitle>
+            <CardDescription>
+              Log ind for at fortsætte
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              className="w-full"
+              onClick={loginWithMicrosoft}
+            >
+              <MicrosoftIcon className="mr-2" />
+              Log ind med Microsoft
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
-  const handleRename = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (renamingConversationId && newTitle.trim()) {
-        setConversations(conversations.map(c => 
-            c.id === renamingConversationId ? {...c, title: newTitle.trim()} : c
-        ));
-        setRenamingConversationId(null);
-        setNewTitle('');
-    }
-  };
-
-  const handleDelete = () => {
-    if (deletingConversationId) {
-        setConversations(conversations.filter(c => c.id !== deletingConversationId));
-        if (activeConversationId === deletingConversationId) {
-            setActiveConversationId(null);
-        }
-        setDeletingConversationId(null);
-    }
-  };
-
-
+  // User is logged in and verified
   return (
     <div className="h-screen w-full flex">
-      <Sidebar side="left" variant="sidebar" collapsible="offcanvas">
-        <SidebarHeader>
-            <div className="flex items-center gap-2">
-                 <Image
-                    src="https://firebasestorage.googleapis.com/v0/b/marketplan-canvas.firebasestorage.app/o/Sj%C3%A6llandske_Nyheder_Bred_RGB_ny.png?alt=media&token=a37e81ab-1d4b-4913-bab2-c35a5fda6056"
-                    alt="Sjællandske Medier logo"
-                    width={150}
-                    height={37}
-                    priority
-                />
-                <SidebarTrigger className="ml-auto" />
-            </div>
-        </SidebarHeader>
-        <SidebarContent className="p-2 flex flex-col">
-            <Button variant="outline" className='w-full justify-start' onClick={() => setActiveConversationId(null)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Ny samtale
-            </Button>
-            <div className='flex-1 mt-4 overflow-y-auto'>
-                <p className='text-sm text-muted-foreground px-2'>Historik</p>
-                <SidebarMenu>
-                    {conversations.map(conv => (
-                        <SidebarMenuItem key={conv.id}>
-                            {renamingConversationId === conv.id ? (
-                                <form onSubmit={handleRename} className="p-2">
-                                    <Input 
-                                        value={newTitle}
-                                        onChange={(e) => setNewTitle(e.target.value)}
-                                        onBlur={() => setRenamingConversationId(null)}
-                                        autoFocus
-                                        className="h-8"
-                                    />
-                                </form>
-                            ) : (
-                                <SidebarMenuButton 
-                                    tooltip={conv.title} 
-                                    isActive={conv.id === activeConversationId}
-                                    onClick={() => handleSelectConversation(conv.id)}
-                                >
-                                    {conv.title}
-                                </SidebarMenuButton>
-                            )}
-                             <SidebarMenuAction showOnHover>
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-6 w-6">
-                                            <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent>
-                                        <DropdownMenuItem onClick={() => startRename(conv)}>
-                                            Omdøb
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => setDeletingConversationId(conv.id)} className="text-destructive">
-                                            <Trash2 className="mr-2 h-4 w-4" />
-                                            Slet
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </SidebarMenuAction>
-                        </SidebarMenuItem>
-                    ))}
-                </SidebarMenu>
-            </div>
-        </SidebarContent>
-        <SidebarFooter className="p-2">
-            
-        </SidebarFooter>
-      </Sidebar>
-      <main className="flex flex-col flex-1">
-        <GeminiStudio 
-            activeConversation={activeConversation} 
-            onNewConversation={handleNewConversation}
-            onUpdateConversation={handleUpdateConversation} 
-        />
-      </main>
-
-      <AlertDialog open={!!deletingConversationId} onOpenChange={(open) => !open && setDeletingConversationId(null)}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>Er du sikker?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    Denne handling kan ikke fortrydes. Dette vil permanent slette din samtale.
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel>Annuller</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Slet</AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        <main className="flex flex-col flex-1">
+            {/* The main chat component will go here */}
+             <GeminiStudio
+                activeConversation={null}
+                onNewConversation={async () => null}
+                onUpdateConversation={() => {}}
+            />
+        </main>
     </div>
   );
 }
