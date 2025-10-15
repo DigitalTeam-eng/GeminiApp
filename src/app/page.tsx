@@ -6,7 +6,6 @@ import { useUser, useAuth } from '@/firebase';
 import {
   signInWithPopup,
   OAuthProvider,
-  getRedirectResult,
 } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,7 +26,7 @@ const MicrosoftIcon = (props: React.SVGProps<SVGSVGElement>) => (
     xmlns="http://www.w3.org/2000/svg"
     width="24"
     height="24"
-    viewBox="0 0 24 24"
+    viewBox="0 0 24"
     {...props}
   >
     <path fill="#f25022" d="M11.5 21.5h-9v-9h9z" />
@@ -40,67 +39,15 @@ const MicrosoftIcon = (props: React.SVGProps<SVGSVGElement>) => (
 export default function Home() {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
-  const [isVerifying, setIsVerifying] = useState(true);
   const { toast } = useToast();
 
   const requiredDomain = '@sn.dk';
   // IMPORTANT: This variable is read on the client, so it MUST start with NEXT_PUBLIC_
   const requiredTenantId = process.env.NEXT_PUBLIC_AZURE_AD_TENANT_ID;
-
-  useEffect(() => {
-    if (isUserLoading) {
-      // Still waiting for the initial auth state from onAuthStateChanged
-      return;
-    }
-
-    if (user) {
-        // If there's already a user session, no need to verify again.
-        setIsVerifying(false);
-        return;
-    }
-
-    getRedirectResult(auth)
-      .then((result) => {
-        if (!result) {
-          setIsVerifying(false);
-          return;
-        }
-
-        const userEmail = result.user.email;
-        const tenantId = result.user.tenantId;
-
-        if (!userEmail || !userEmail.endsWith(requiredDomain)) {
-          toast({
-            variant: 'destructive',
-            title: 'Adgang nægtet',
-            description: `Login er kun tilladt for brugere med en ${requiredDomain} e-mailadresse.`,
-          });
-          auth.signOut();
-        } else if (tenantId !== requiredTenantId) {
-           toast({
-            variant: 'destructive',
-            title: 'Adgang nægtet',
-            description: `Forkert organisation. Tenant ID'er matcher ikke. Bruger: ${tenantId}, Forventet: ${requiredTenantId}`,
-          });
-          auth.signOut();
-        }
-        // If all checks pass, the user is implicitly allowed to proceed.
-        // The `user` state from `useUser` will be populated, and the UI will update.
-
-      })
-      .catch((error) => {
-        console.error('Redirect Result Error:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Login Fejl',
-          description: `Der opstod en fejl efter omdirigering: ${error.message}`,
-        });
-      })
-      .finally(() => {
-        setIsVerifying(false);
-      });
-  }, [isUserLoading, user, auth, toast, requiredTenantId]);
-
+  
+  // isUserLoading handles the initial auth state check from onAuthStateChanged
+  // No need for a separate isVerifying state
+  
   const loginWithMicrosoft = async () => {
     if (!requiredTenantId) {
       toast({
@@ -120,7 +67,7 @@ export default function Home() {
     try {
         const result = await signInWithPopup(auth, provider);
         // Successful login is handled by the onAuthStateChanged listener,
-        // but we can do immediate validation here as well.
+        // but we can do immediate validation here as well for better error feedback.
         const userEmail = result.user.email;
         const tenantId = result.user.tenantId;
 
@@ -128,8 +75,10 @@ export default function Home() {
           throw new Error(`Login er kun tilladt for brugere med en ${requiredDomain} e-mailadresse.`);
         }
         if (tenantId !== requiredTenantId) {
-          throw new Error(`Forkert organisation. Du er logget ind med et forkert Microsoft tenant.`);
+          throw new Error(`Forkert organisation. Modtaget Tenant ID: ${tenantId}. Forventet Tenant ID: ${requiredTenantId}`);
         }
+        // If validation passes, the `onAuthStateChanged` listener in useUser hook
+        // will set the user state and the component will re-render, showing GeminiStudio.
 
     } catch (error: any) {
         console.error("Popup Login Fejl:", error);
@@ -139,11 +88,12 @@ export default function Home() {
             description: `Fejlkode: ${error.code}\n\nFejlbesked: ${error.message}`,
             duration: 10000, // Vis toast i 10 sekunder
         });
+        // Ensure user is signed out in case of a partial or failed login attempt
         auth.signOut();
     }
   };
 
-  if (isUserLoading || isVerifying) {
+  if (isUserLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Card className="w-[350px]">
