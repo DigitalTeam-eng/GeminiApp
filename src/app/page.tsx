@@ -44,6 +44,7 @@ export default function Home() {
   const { toast } = useToast();
 
   const requiredDomain = '@sn.dk';
+  // IMPORTANT: This variable is read on the client, so it MUST start with NEXT_PUBLIC_
   const requiredTenantId = process.env.NEXT_PUBLIC_AZURE_AD_TENANT_ID;
 
   useEffect(() => {
@@ -79,7 +80,7 @@ export default function Home() {
            toast({
             variant: 'destructive',
             title: 'Adgang nægtet',
-            description: 'Du er logget ind på den forkerte Microsoft-konto. Skift venligst.',
+            description: `Forkert organisation. Tenant ID'er matcher ikke. Bruger: ${tenantId}, Forventet: ${requiredTenantId}`,
           });
           auth.signOut();
         }
@@ -106,7 +107,7 @@ export default function Home() {
         variant: 'destructive',
         title: 'Konfigurationsfejl',
         description:
-          'Azure AD Tenant ID er ikke konfigureret korrekt i applikationen.',
+          'Azure AD Tenant ID er ikke konfigureret korrekt i applikationen. NEXT_PUBLIC_AZURE_AD_TENANT_ID mangler.',
       });
       console.error('NEXT_PUBLIC_AZURE_AD_TENANT_ID is not set.');
       return;
