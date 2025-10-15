@@ -4,7 +4,8 @@
 import { useEffect, useState } from 'react';
 import { useUser, useAuth } from '@/firebase';
 import {
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   OAuthProvider,
 } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
@@ -40,14 +41,53 @@ export default function Home() {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
   const { toast } = useToast();
+  const [isVerifying, setIsVerifying] = useState(true);
 
   const requiredDomain = '@sn.dk';
-  // IMPORTANT: This variable is read on the client, so it MUST start with NEXT_PUBLIC_
   const requiredTenantId = process.env.NEXT_PUBLIC_AZURE_AD_TENANT_ID;
   
-  // isUserLoading handles the initial auth state check from onAuthStateChanged
-  // No need for a separate isVerifying state
-  
+  useEffect(() => {
+    // When the component mounts, check for a redirect result.
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result) {
+          // This is the first authentication after redirect.
+          // Validate the user here.
+          const userEmail = result.user.email;
+          const tenantId = result.user.tenantId;
+
+          if (!requiredTenantId) {
+            throw new Error('Azure AD Tenant ID (NEXT_PUBLIC_AZURE_AD_TENANT_ID) er ikke konfigureret i applikationen.');
+          }
+
+          if (!userEmail || !userEmail.endsWith(requiredDomain)) {
+            throw new Error(`Login er kun tilladt for brugere med en ${requiredDomain} e-mailadresse.`);
+          }
+
+          if (tenantId !== requiredTenantId) {
+             throw new Error(`Forkert organisation. Modtaget Tenant ID: ${tenantId}. Forventet Tenant ID: ${requiredTenantId}`);
+          }
+          // Validation passed. The onAuthStateChanged listener will handle the user state.
+        }
+        // If there's no result, it means this is a normal page load, not a redirect.
+      })
+      .catch((error) => {
+        // Handle errors from the redirect result, e.g., user cancels login.
+        console.error("Redirect Login Fejl:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Login Fejl',
+            description: `Fejlkode: ${error.code}\n\nFejlbesked: ${error.message}`,
+            duration: 10000,
+        });
+        auth.signOut(); // Ensure clean state
+      })
+      .finally(() => {
+        // This combines both Firebase auth loading and our verification step
+        setIsVerifying(false);
+      });
+  }, [auth, requiredTenantId, toast]);
+
   const loginWithMicrosoft = async () => {
     if (!requiredTenantId) {
       toast({
@@ -64,36 +104,12 @@ export default function Home() {
       tenant: requiredTenantId,
     });
     
-    try {
-        const result = await signInWithPopup(auth, provider);
-        // Successful login is handled by the onAuthStateChanged listener,
-        // but we can do immediate validation here as well for better error feedback.
-        const userEmail = result.user.email;
-        const tenantId = result.user.tenantId;
-
-        if (!userEmail || !userEmail.endsWith(requiredDomain)) {
-          throw new Error(`Login er kun tilladt for brugere med en ${requiredDomain} e-mailadresse.`);
-        }
-        if (tenantId !== requiredTenantId) {
-          throw new Error(`Forkert organisation. Modtaget Tenant ID: ${tenantId}. Forventet Tenant ID: ${requiredTenantId}`);
-        }
-        // If validation passes, the `onAuthStateChanged` listener in useUser hook
-        // will set the user state and the component will re-render, showing GeminiStudio.
-
-    } catch (error: any) {
-        console.error("Popup Login Fejl:", error);
-        toast({
-            variant: 'destructive',
-            title: 'Login Fejl',
-            description: `Fejlkode: ${error.code}\n\nFejlbesked: ${error.message}`,
-            duration: 10000, // Vis toast i 10 sekunder
-        });
-        // Ensure user is signed out in case of a partial or failed login attempt
-        auth.signOut();
-    }
+    // signInWithRedirect does not return a result here, it navigates away.
+    // The result is handled by getRedirectResult when the user is returned to the app.
+    await signInWithRedirect(auth, provider);
   };
 
-  if (isUserLoading) {
+  if (isUserLoading || isVerifying) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Card className="w-[350px]">
