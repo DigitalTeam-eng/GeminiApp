@@ -1,14 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   signInWithRedirect,
-  getRedirectResult,
   OAuthProvider,
-  Auth,
 } from 'firebase/auth';
-import { useFirebase } from '@/firebase'; // Importerer den primære hook
+import { useAuth } from '@/app/auth/auth-provider'; // Ændret fra useFirebase
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import NextImage from 'next/image';
@@ -30,15 +28,14 @@ const MicrosoftIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, isUserLoading, auth } = useFirebase(); // Bruger den centrale hook
+  const { user, loading, auth } = useAuth(); // Bruger nu useAuth direkte
   const { toast } = useToast();
 
-  // Omdiriger til hovedsiden hvis brugeren er logget ind
   useEffect(() => {
-    if (!isUserLoading && user) {
+    if (!loading && user) {
       router.push('/');
     }
-  }, [user, isUserLoading, router]);
+  }, [user, loading, router]);
 
   const handleLogin = async () => {
     if (!auth) {
@@ -64,12 +61,10 @@ export default function LoginPage() {
     provider.setCustomParameters({
       tenant: requiredTenantId,
     });
-    // Her starter redirect flowet. Vi håndterer ikke resultatet her, det gør AuthProvider.
     await signInWithRedirect(auth, provider);
   };
 
-  // Viser en loading-skærm mens vi venter på at vide om brugeren er logget ind eller ej
-  if (isUserLoading || user) {
+  if (loading || user) {
      return (
       <div className="flex h-screen w-full items-center justify-center">
         <p>Bekræfter login-status...</p>
@@ -77,7 +72,6 @@ export default function LoginPage() {
     );
   }
 
-  // Hvis vi ikke loader og der ikke er nogen bruger, vis login-siden.
   return (
     <div className="flex h-screen w-full items-center justify-center bg-background">
        <div className="mx-auto flex w-full max-w-[350px] flex-col justify-center gap-6 text-center">
@@ -93,7 +87,7 @@ export default function LoginPage() {
           <p className="text-sm text-muted-foreground">
             Log ind med din Microsoft-konto for at fortsætte.
           </p>
-        <Button onClick={handleLogin} disabled={isUserLoading || !auth}>
+        <Button onClick={handleLogin} disabled={loading || !auth}>
            <MicrosoftIcon className="mr-2" />
           Login med Microsoft
         </Button>
