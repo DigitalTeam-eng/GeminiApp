@@ -66,5 +66,9 @@
     "@types/react-dom": "^18",
     "@types/react-syntax-highlighter": "^15.5.13"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@babel/core": "^7.24.7",
+    "@babel/preset-env": "^7.24.7",
+    "babel-loader": "^9.1.3"
+  }
 }
