@@ -8,12 +8,10 @@ import {
   OAuthProvider,
   Auth,
 } from 'firebase/auth';
-import { useAuth } from '@/app/auth/auth-provider'; // Vi bruger stadig denne til at tjekke om brugeren ER logget ind
+import { useFirebase } from '@/firebase'; // Importerer den primære hook
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import NextImage from 'next/image';
-import { initializeFirebase } from '@/firebase';
-
 
 const MicrosoftIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -30,40 +28,20 @@ const MicrosoftIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-
 export default function LoginPage() {
   const router = useRouter();
-  const { user, loading } = useAuth(); // Bruges til at omdirigere HVIS brugeren allerede er logget ind
+  const { user, isUserLoading, auth } = useFirebase(); // Bruger den centrale hook
   const { toast } = useToast();
-  const [authService, setAuthService] = useState<Auth | null>(null);
 
-  // Initialiser Firebase auth service på klienten
-  useEffect(() => {
-    const { auth } = initializeFirebase();
-    setAuthService(auth);
-
-    // Håndter eventuelle fejl fra en redirect
-    getRedirectResult(auth).catch((error) => {
-      console.error("Login redirect error:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Login Fejl',
-        description: `Der opstod en fejl under login-processen. Fejlkode: ${error.code}`,
-        duration: 9000,
-      });
-    });
-
-  }, [toast]);
-  
   // Omdiriger til hovedsiden hvis brugeren er logget ind
   useEffect(() => {
-    if (!loading && user) {
+    if (!isUserLoading && user) {
       router.push('/');
     }
-  }, [user, loading, router]);
+  }, [user, isUserLoading, router]);
 
   const handleLogin = async () => {
-    if (!authService) {
+    if (!auth) {
       toast({
         variant: 'destructive',
         title: 'Fejl',
@@ -86,12 +64,12 @@ export default function LoginPage() {
     provider.setCustomParameters({
       tenant: requiredTenantId,
     });
-    // Her starter redirect flowet
-    await signInWithRedirect(authService, provider);
+    // Her starter redirect flowet. Vi håndterer ikke resultatet her, det gør AuthProvider.
+    await signInWithRedirect(auth, provider);
   };
 
   // Viser en loading-skærm mens vi venter på at vide om brugeren er logget ind eller ej
-  if (loading || user) {
+  if (isUserLoading || user) {
      return (
       <div className="flex h-screen w-full items-center justify-center">
         <p>Bekræfter login-status...</p>
@@ -115,7 +93,7 @@ export default function LoginPage() {
           <p className="text-sm text-muted-foreground">
             Log ind med din Microsoft-konto for at fortsætte.
           </p>
-        <Button onClick={handleLogin} disabled={!authService}>
+        <Button onClick={handleLogin} disabled={isUserLoading || !auth}>
            <MicrosoftIcon className="mr-2" />
           Login med Microsoft
         </Button>
