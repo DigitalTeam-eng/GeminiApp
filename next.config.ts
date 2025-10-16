@@ -43,6 +43,24 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+   webpack: (config, { isServer }) => {
+    // Denne konfiguration løser et problem, hvor visse Genkit-afhængigheder 
+    // bruger forældede Node.js-funktioner, som ikke understøttes af Webpack.
+    // Ved at tilføje en 'loader' for .js-filer i node_modules sikrer vi,
+    // at disse scripts bliver korrekt behandlet under bygge-processen.
+    config.module.rules.push({
+      test: /\.js$/,
+      include: /node_modules/,
+      use: {
+        loader: 'babel-loader',
+        options: {
+          presets: ['@babel/preset-env'],
+        },
+      },
+    });
+
+    return config;
+  },
 };
 
 export default nextConfig;
