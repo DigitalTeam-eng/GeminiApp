@@ -6,6 +6,7 @@ import {
   signInWithRedirect,
   getRedirectResult,
   OAuthProvider,
+  signOut,
 } from 'firebase/auth';
 import { useAuth } from '@/app/auth/auth-provider';
 import { Button } from '@/components/ui/button';
@@ -31,20 +32,41 @@ export default function LoginPage() {
   const router = useRouter();
   const { user, loading, auth } = useAuth();
   const { toast } = useToast();
-  const [isVerifying, setIsVerifying] = useState(true); // State to handle the redirect result processing
+  const [isVerifying, setIsVerifying] = useState(true);
 
   // This effect handles the result of the redirect from Microsoft
   useEffect(() => {
     if (!auth) {
       // Auth service isn't ready yet, do nothing.
+      // We set isVerifying to false to allow the page to render.
+      setIsVerifying(false);
       return;
     }
 
     getRedirectResult(auth)
       .then((result) => {
         if (result) {
-          // User successfully signed in.
-          // The onAuthStateChanged listener in AuthProvider will handle the redirect to '/'
+          // User is signed in. Now, we MUST validate their details.
+          const user = result.user;
+          const userEmail = user.email;
+          const tenantId = user.tenantId;
+
+          const requiredDomain = '@sn.dk';
+          const requiredTenantId = process.env.NEXT_PUBLIC_AZURE_AD_TENANT_ID;
+
+          if (!requiredTenantId) {
+            throw new Error('Konfigurationsfejl: Azure AD Tenant ID (NEXT_PUBLIC_AZURE_AD_TENANT_ID) er ikke sat i applikationen.');
+          }
+
+          if (!userEmail || !userEmail.endsWith(requiredDomain)) {
+            throw new Error(`Login er kun tilladt for brugere med en ${requiredDomain} e-mailadresse.`);
+          }
+
+          if (tenantId !== requiredTenantId) {
+            throw new Error(`Login fra en forkert organisation. Brugerens Tenant ID (${tenantId}) matcher ikke applikationens forventede Tenant ID.`);
+          }
+          
+          // If all checks pass, we can proceed.
           toast({
             title: 'Login succesfuld',
             description: `Velkommen, ${result.user.displayName}!`,
@@ -52,14 +74,19 @@ export default function LoginPage() {
         }
       })
       .catch((error) => {
-        // Handle Errors here.
-        console.error("Redirect Result Error:", error);
+        // Handle ALL errors here, including validation errors thrown above.
+        console.error("Redirect Result/Validation Error:", error);
         toast({
           variant: 'destructive',
           title: 'Login Fejl',
           description: error.message || 'Der opstod en ukendt fejl under login.',
           duration: 9000,
         });
+
+        // If an error occurs, we make sure the user is signed out of the broken session.
+        if (auth) {
+          signOut(auth);
+        }
       })
       .finally(() => {
         // We are done checking for a redirect result.
@@ -105,7 +132,7 @@ export default function LoginPage() {
   };
 
   // Show a loading state while checking auth status or processing the redirect result.
-  if (loading || isVerifying || user) {
+  if (loading || isVerifying) {
      return (
       <div className="flex h-screen w-full items-center justify-center">
         <p>Bekræfter login-status...</p>
@@ -113,7 +140,7 @@ export default function LoginPage() {
     );
   }
 
-  // If not loading and no user, show the login page.
+  // If not loading/verifying and no user, show the login page.
   return (
     <div className="flex h-screen w-full items-center justify-center bg-background">
        <div className="mx-auto flex w-full max-w-[350px] flex-col justify-center gap-6 text-center">
