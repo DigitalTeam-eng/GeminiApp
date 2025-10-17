@@ -43,15 +43,19 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-   webpack: (config, { isServer }) => {
-    // Løser "require.extensions is not supported by webpack" fejlen fra handlebars
+  webpack: (config, { isServer }) => {
+    // This rule is to solve the "require.extensions is not supported by webpack"
+    // error that comes from 'handlebars' and other old packages used by genkit.
+    // It tells webpack to use babel-loader to transpile these files.
     config.module.rules.push({
       test: /\.js$/,
       include: /node_modules/,
       use: {
         loader: 'babel-loader',
         options: {
-          presets: ['@babel/preset-env'],
+          presets: [['@babel/preset-env', {
+            "targets": "defaults"
+          }]]
         },
       },
     });
