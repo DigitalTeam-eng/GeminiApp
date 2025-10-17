@@ -43,6 +43,21 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+   webpack: (config, { isServer }) => {
+    // Løser "require.extensions is not supported by webpack" fejlen fra handlebars
+    config.module.rules.push({
+      test: /\.js$/,
+      include: /node_modules/,
+      use: {
+        loader: 'babel-loader',
+        options: {
+          presets: ['@babel/preset-env'],
+        },
+      },
+    });
+
+    return config;
+  },
 };
 
 export default nextConfig;
