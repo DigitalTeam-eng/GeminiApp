@@ -8,4 +8,3 @@ export const firebaseConfig = {
   "authDomain": "geminiapp-dxaah3g6cnhadthr.northeurope-01.azurewebsites.net",
   "projectId": "studio-6932359731-5d066",
 };
-
