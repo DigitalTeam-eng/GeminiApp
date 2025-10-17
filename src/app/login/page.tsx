@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  signInWithPopup, // Ændret fra signInWithRedirect
+  signInWithRedirect,
+  getRedirectResult,
   OAuthProvider,
 } from 'firebase/auth';
 import { useAuth } from '@/app/auth/auth-provider';
@@ -30,12 +31,49 @@ export default function LoginPage() {
   const router = useRouter();
   const { user, loading, auth } = useAuth();
   const { toast } = useToast();
+  const [isVerifying, setIsVerifying] = useState(true); // State to handle the redirect result processing
 
+  // This effect handles the result of the redirect from Microsoft
   useEffect(() => {
-    if (!loading && user) {
+    if (!auth) {
+      // Auth service isn't ready yet, do nothing.
+      return;
+    }
+
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result) {
+          // User successfully signed in.
+          // The onAuthStateChanged listener in AuthProvider will handle the redirect to '/'
+          toast({
+            title: 'Login succesfuld',
+            description: `Velkommen, ${result.user.displayName}!`,
+          });
+        }
+      })
+      .catch((error) => {
+        // Handle Errors here.
+        console.error("Redirect Result Error:", error);
+        toast({
+          variant: 'destructive',
+          title: 'Login Fejl',
+          description: error.message || 'Der opstod en ukendt fejl under login.',
+          duration: 9000,
+        });
+      })
+      .finally(() => {
+        // We are done checking for a redirect result.
+        setIsVerifying(false);
+      });
+  }, [auth, toast]);
+
+
+  // This effect redirects the user to the main page if they are logged in.
+  useEffect(() => {
+    if (!loading && !isVerifying && user) {
       router.push('/');
     }
-  }, [user, loading, router]);
+  }, [user, loading, isVerifying, router]);
 
   const handleLogin = async () => {
     if (!auth) {
@@ -62,30 +100,12 @@ export default function LoginPage() {
       tenant: requiredTenantId,
     });
     
-    try {
-      // Brug signInWithPopup i stedet for signInWithRedirect
-      await signInWithPopup(auth, provider);
-      // Efter vellykket login, vil useEffect ovenfor håndtere redirect til '/'
-    } catch (error: any) {
-      // Håndter almindelige fejl som bruger-annullering af popup
-      if (error.code === 'auth/popup-closed-by-user') {
-        toast({
-          variant: 'default',
-          title: 'Login annulleret',
-          description: 'Login-vinduet blev lukket, før processen var færdig.',
-        });
-      } else {
-        toast({
-          variant: 'destructive',
-          title: 'Login Fejl',
-          description: error.message || 'Der opstod en ukendt fejl under login.',
-        });
-      }
-      console.error("Popup Login Fejl:", error);
-    }
+    // Start the redirect process. The useEffect hook will handle the result.
+    await signInWithRedirect(auth, provider);
   };
 
-  if (loading || user) {
+  // Show a loading state while checking auth status or processing the redirect result.
+  if (loading || isVerifying || user) {
      return (
       <div className="flex h-screen w-full items-center justify-center">
         <p>Bekræfter login-status...</p>
@@ -93,6 +113,7 @@ export default function LoginPage() {
     );
   }
 
+  // If not loading and no user, show the login page.
   return (
     <div className="flex h-screen w-full items-center justify-center bg-background">
        <div className="mx-auto flex w-full max-w-[350px] flex-col justify-center gap-6 text-center">
