@@ -3,10 +3,10 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  signInWithRedirect,
+  signInWithPopup, // Ændret fra signInWithRedirect
   OAuthProvider,
 } from 'firebase/auth';
-import { useAuth } from '@/app/auth/auth-provider'; // Ændret fra useFirebase
+import { useAuth } from '@/app/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import NextImage from 'next/image';
@@ -28,7 +28,7 @@ const MicrosoftIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, loading, auth } = useAuth(); // Bruger nu useAuth direkte
+  const { user, loading, auth } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -61,7 +61,28 @@ export default function LoginPage() {
     provider.setCustomParameters({
       tenant: requiredTenantId,
     });
-    await signInWithRedirect(auth, provider);
+    
+    try {
+      // Brug signInWithPopup i stedet for signInWithRedirect
+      await signInWithPopup(auth, provider);
+      // Efter vellykket login, vil useEffect ovenfor håndtere redirect til '/'
+    } catch (error: any) {
+      // Håndter almindelige fejl som bruger-annullering af popup
+      if (error.code === 'auth/popup-closed-by-user') {
+        toast({
+          variant: 'default',
+          title: 'Login annulleret',
+          description: 'Login-vinduet blev lukket, før processen var færdig.',
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Login Fejl',
+          description: error.message || 'Der opstod en ukendt fejl under login.',
+        });
+      }
+      console.error("Popup Login Fejl:", error);
+    }
   };
 
   if (loading || user) {
