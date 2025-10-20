@@ -1,3 +1,4 @@
+
 'use server';
 
 import { routeUserPrompt } from '@/ai/flows/route-user-prompt';
@@ -51,6 +52,8 @@ export async function generateResponse(
 
     if (result.type === 'image') {
        return { data: { type: 'image', model: result.model, ...result.result } };
+    } else if (result.type === 'video') {
+      return { data: { type: 'video', model: result.model, ...result.result } };
     } else {
        return { data: { type: 'text', model: result.model, ...result.result } };
     }

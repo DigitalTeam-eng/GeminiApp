@@ -15,6 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { PromptForm } from './prompt-form';
 import { ChatBubble } from './chat-bubble';
 import { ImageDisplay } from './image-display';
+import { VideoDisplay } from './video-display'; 
 import { generateResponse, generateConversationTitle } from '@/app/actions';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { UserImageDisplay } from './user-image-display';
@@ -58,6 +59,7 @@ export type Message = {
   role: 'user' | 'assistant';
   content?: string;
   imageUrl?: string;
+  videoUrl?: string;
   prompt?: string;
   baseImageUrls?: string[];
   model?: string;
@@ -217,7 +219,8 @@ export function GeminiStudio({ }: GeminiStudioProps) {
         let baseImageDataUris: string[] = filesDataUris || [];
 
         // Check if the last message from assistant was an image and no new files were attached
-        const lastMessage = currentConv.messages[currentConv.messages.length - 2];
+        const lastMessage = currentConv.messages.length > 1 ? currentConv.messages[currentConv.messages.length - 2] : null;
+
         if (files.length === 0 && lastMessage?.role === 'assistant' && lastMessage.imageUrl) {
             baseImageDataUris.push(lastMessage.imageUrl);
         }
@@ -240,6 +243,13 @@ export function GeminiStudio({ }: GeminiStudioProps) {
             assistantMessage = {
                 role: 'assistant',
                 imageUrl: result.data.imageDataUri,
+                prompt: prompt,
+                model: result.data.model,
+            };
+        } else if (result.data.type === 'video') {
+            assistantMessage = {
+                role: 'assistant',
+                videoUrl: result.data.videoDataUri,
                 prompt: prompt,
                 model: result.data.model,
             };
@@ -397,14 +407,29 @@ export function GeminiStudio({ }: GeminiStudioProps) {
                 }
 
                 // Assistant message
-                return message.imageUrl ? (
-                  <ImageDisplay
-                    key={index}
-                    src={message.imageUrl}
-                    prompt={message.prompt ?? 'Genereret billede'}
-                    model={message.model}
-                  />
-                ) : (
+                if (message.imageUrl) {
+                  return (
+                    <ImageDisplay
+                      key={index}
+                      src={message.imageUrl}
+                      prompt={message.prompt ?? 'Genereret billede'}
+                      model={message.model}
+                    />
+                  );
+                }
+                
+                if (message.videoUrl) {
+                  return (
+                    <VideoDisplay
+                      key={index}
+                      src={message.videoUrl}
+                      prompt={message.prompt ?? 'Genereret video'}
+                      model={message.model}
+                    />
+                  );
+                }
+
+                return (
                   <ChatBubble
                     key={index}
                     role={message.role}
@@ -448,7 +473,3 @@ export function GeminiStudio({ }: GeminiStudioProps) {
     </SidebarProvider>
   );
 }
-
-    
-
-    
