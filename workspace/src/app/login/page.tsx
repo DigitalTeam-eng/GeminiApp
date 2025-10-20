@@ -10,7 +10,6 @@ import {
 import { useAuth } from '@/app/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { getFirebaseAuth } from '@/lib/firebase';
 import NextImage from 'next/image';
 
 const MicrosoftIcon = (props: React.SVGProps<SVGSVGElement>) => (
