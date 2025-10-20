@@ -12,14 +12,12 @@ export function initializeFirebase() {
     // It's critical for non-Firebase hosting environments like Azure.
     const getAuthDomain = () => {
         if (typeof window !== 'undefined') {
-            // For local development on a specific port
-            if (window.location.hostname === 'localhost') {
-                return `localhost:${window.location.port}`;
-            }
-            // For deployed environments (like Azure)
-            return window.location.hostname;
+            // Using window.location.host is the most robust way to get the correct
+            // hostname and port, regardless of the environment (localhost, cloud workstation, or deployed).
+            return window.location.host;
         }
-        // Fallback for server-side rendering (though auth is client-side)
+        // Fallback for server-side rendering, though auth is client-side.
+        // This value is less critical as client-side will always take precedence.
         return process.env.NEXT_PUBLIC_VERCEL_URL || 'localhost:9002';
     };
 
