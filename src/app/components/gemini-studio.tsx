@@ -52,6 +52,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { signOut } from 'firebase/auth';
 
 
 export type Message = {
@@ -217,12 +218,29 @@ export function GeminiStudio({ }: GeminiStudioProps) {
         
         let baseImageDataUris: string[] = filesDataUris || [];
 
-        // Check if the last message from assistant was an image and no new files were attached
-        const lastMessage = currentConv.messages.length > 1 ? currentConv.messages[currentConv.messages.length - 2] : null;
-
-        if (files.length === 0 && lastMessage?.role === 'assistant' && lastMessage.imageUrl) {
-            baseImageDataUris.push(lastMessage.imageUrl);
+        // Smart image gathering: Traverse backwards and collect all recent images
+        // until we hit a message with only text content.
+        if (files.length === 0) {
+            for (let i = currentConv.messages.length - 2; i >= 0; i--) {
+                const msg = currentConv.messages[i];
+                let hasContent = false;
+                if (msg.imageUrl) {
+                    baseImageDataUris.unshift(msg.imageUrl);
+                    hasContent = true;
+                }
+                if (msg.baseImageUrls) {
+                    baseImageDataUris.unshift(...msg.baseImageUrls);
+                    hasContent = true;
+                }
+                // If the message was purely text or a video, stop gathering.
+                if (!hasContent || msg.videoUrl || (msg.content && !msg.imageUrl && !msg.baseImageUrls)) {
+                    break;
+                }
+            }
         }
+        // Remove duplicates
+        baseImageDataUris = [...new Set(baseImageDataUris)];
+
 
         const history: HistoryMessage[] = currentConv.messages
           .slice(0, -1)
