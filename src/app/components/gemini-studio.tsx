@@ -347,8 +347,8 @@ export function GeminiStudio({ }: GeminiStudioProps) {
                       <p className="text-sm font-medium truncate">{user?.displayName}</p>
                       <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
                   </div>
-                  {firebaseAuth && (
-                    <Button variant="ghost" size="icon" onClick={() => firebaseAuth.signOut()}>
+                  {firebaseAuth.auth && (
+                    <Button variant="ghost" size="icon" onClick={() => firebaseAuth.auth && signOut(firebaseAuth.auth)}>
                         <LogOut className="h-4 w-4" />
                     </Button>
                   )}
@@ -448,5 +448,7 @@ export function GeminiStudio({ }: GeminiStudioProps) {
     </SidebarProvider>
   );
 }
+
+    
 
     

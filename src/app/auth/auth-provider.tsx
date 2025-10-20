@@ -15,6 +15,7 @@ interface AuthContextType {
   loading: boolean;
   logout: () => void;
   auth: Auth | null;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -22,13 +23,14 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   logout: () => {},
   auth: null,
+  signOut: async () => {},
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { user, isUserLoading, auth, firebaseApp, firestore } = useFirebase(); 
   const router = useRouter();
 
-  const logout = async () => {
+  const handleSignOut = async () => {
     if (auth) {
         await signOut(auth);
         router.push('/login'); 
@@ -38,9 +40,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const value = { 
       user, 
       loading: isUserLoading, 
-      logout, 
+      logout: handleSignOut, // backwards compatibility
+      signOut: handleSignOut,
       auth, 
-      // Expose other services if needed, though often not necessary in AuthContext
       firebaseApp, 
       firestore 
   };
@@ -54,5 +56,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 };
 
 export const useAuth = () => useContext(AuthContext);
+
+    
 
     
