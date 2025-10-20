@@ -26,7 +26,7 @@ export function initializeFirebase() {
     const firebaseConfig = {
       "apiKey": "AIzaSyBXs4Zt7FZI7ibU1pmSuF1LT4_J9mIutJA",
       "authDomain": getAuthDomain(),
-      "projectId": "studio-6932359731-5d066",
+      "projectId": "studio-6932359731-5d066"
     };
     
     const firebaseApp = initializeApp(firebaseConfig);
