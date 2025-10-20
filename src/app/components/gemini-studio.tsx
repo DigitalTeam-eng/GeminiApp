@@ -218,17 +218,42 @@ export function GeminiStudio({ }: GeminiStudioProps) {
         
         let baseImageDataUris: string[] = filesDataUris || [];
         
-        // If there's no new files, check previous messages for context
+        // If there are no new files, check previous messages for context
         if (baseImageDataUris.length === 0 && currentConv.messages.length > 1) {
-            const lastMessage = currentConv.messages[currentConv.messages.length - 2];
-            if (lastMessage.role === 'assistant') {
-                // If the last message was an AI-generated image or video, use it as context
-                if (lastMessage.imageUrl) {
-                    baseImageDataUris.push(lastMessage.imageUrl);
+            // Start from the message before the current user's message
+            for (let i = currentConv.messages.length - 2; i >= 0; i--) {
+                const msg = currentConv.messages[i];
+                
+                // If it's a video, find the original image that created it
+                if (msg.role === 'assistant' && msg.videoUrl) {
+                    // Search backwards from the video message to find the image it was based on
+                    for (let j = i - 1; j >= 0; j--) {
+                        const prevMsg = currentConv.messages[j];
+                        if (prevMsg.role === 'assistant' && prevMsg.imageUrl) {
+                            baseImageDataUris.push(prevMsg.imageUrl);
+                            // Break inner loop once image is found
+                            break;
+                        }
+                         if (prevMsg.role === 'user' && prevMsg.baseImageUrls && prevMsg.baseImageUrls.length > 0) {
+                             baseImageDataUris.push(...prevMsg.baseImageUrls);
+                             break;
+                         }
+                    }
+                    // Break outer loop since we've found the context for the video
+                    break;
                 }
-                // Also handle video context
-                if (lastMessage.videoUrl) {
-                    baseImageDataUris.push(lastMessage.videoUrl);
+
+                // If it's an assistant message with an image, add it
+                if (msg.role === 'assistant' && msg.imageUrl) {
+                    baseImageDataUris.push(msg.imageUrl);
+                }
+                // If it's a user message with an image, add it
+                if (msg.role === 'user' && msg.baseImageUrls) {
+                    baseImageDataUris.push(...msg.baseImageUrls);
+                }
+                // Stop searching if we hit a message without media, as context is broken
+                if (!msg.imageUrl && !msg.videoUrl && !msg.baseImageUrls) {
+                    break;
                 }
             }
         }
@@ -241,7 +266,7 @@ export function GeminiStudio({ }: GeminiStudioProps) {
             content: msg.content ?? '',
           }));
         
-        const result = await generateResponse({ prompt: prompt || '', baseImageDataUris: baseImageDataUris, history });
+        const result = await generateResponse({ prompt: prompt || '', baseImageDataUris: [...new Set(baseImageDataUris)], history });
 
         if (result.error) {
             throw new Error(result.error);
