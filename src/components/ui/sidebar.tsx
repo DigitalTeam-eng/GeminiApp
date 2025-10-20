@@ -235,7 +235,7 @@ const Sidebar = React.forwardRef<
       >
         <div
           data-sidebar="sidebar-inner"
-          className="flex h-full w-[var(--sidebar-width)] flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow"
+          className="flex h-full w-[var(--sidebar-width)] flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow group-data-[side=right]:rotate-180"
         >
           {children}
         </div>
@@ -742,3 +742,5 @@ export {
   SidebarTrigger,
   useSidebar,
 }
+
+    

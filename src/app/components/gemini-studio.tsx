@@ -16,7 +16,6 @@ import { ChatBubble } from './chat-bubble';
 import { ImageDisplay } from './image-display';
 import { VideoDisplay } from './video-display'; 
 import { generateResponse, generateConversationTitle } from '@/app/actions';
-import { SidebarTrigger } from '@/components/ui/sidebar';
 import { UserImageDisplay } from './user-image-display';
 import type { HistoryMessage } from '@/ai/flows/generate-text-from-prompt';
 import { useAuth } from '@/app/auth/auth-provider';
@@ -31,6 +30,7 @@ import {
   SidebarFooter,
   SidebarProvider,
   SidebarInset,
+  SidebarTrigger
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
@@ -370,7 +370,7 @@ export function GeminiStudio({ }: GeminiStudioProps) {
   return (
     <SidebarProvider>
       <div className="h-screen w-full flex">
-        <Sidebar side="left" collapsible="offcanvas">
+        <Sidebar side="left" collapsible="icon">
             <SidebarHeader>
                 <div className="flex items-center gap-2">
                     <Image
@@ -379,22 +379,22 @@ export function GeminiStudio({ }: GeminiStudioProps) {
                         width={150}
                         height={37}
                         priority
+                        className="group-data-[collapsible=icon]:hidden"
                     />
-                    <SidebarTrigger className="ml-auto md:hidden" />
                 </div>
             </SidebarHeader>
             <SidebarContent className="p-2 flex flex-col">
                 <Button variant="outline" className='w-full justify-start' onClick={handleStartNewConversation}>
                     <Plus className="mr-2 h-4 w-4" />
-                    <span>Ny samtale</span>
+                    <span className="group-data-[collapsible=icon]:hidden">Ny samtale</span>
                 </Button>
                 <div className='flex-1 mt-4 overflow-y-auto'>
-                    <p className='text-sm text-muted-foreground px-2'>Historik</p>
+                    <p className='text-sm text-muted-foreground px-2 group-data-[collapsible=icon]:hidden'>Historik</p>
                     <SidebarMenu>
                         {conversations.map(conv => (
                             <SidebarMenuItem key={conv.id}>
                                 {renamingConversationId === conv.id ? (
-                                    <form onSubmit={handleRename} className="p-2">
+                                    <form onSubmit={handleRename} className="p-2 group-data-[collapsible=icon]:hidden">
                                         <Input 
                                             value={newTitle}
                                             onChange={(e) => setNewTitle(e.target.value)}
@@ -409,7 +409,8 @@ export function GeminiStudio({ }: GeminiStudioProps) {
                                         isActive={conv.id === activeConversationId}
                                         onClick={() => handleSelectConversation(conv.id)}
                                     >
-                                        <span>{conv.title}</span>
+                                        <Plus className="md:hidden" />
+                                        <span className="group-data-[collapsible=icon]:hidden">{conv.title}</span>
                                     </SidebarMenuButton>
                                 )}
                                 <SidebarMenuAction showOnHover>
@@ -441,12 +442,12 @@ export function GeminiStudio({ }: GeminiStudioProps) {
                         <AvatarImage src={user?.photoURL ?? undefined} />
                         <AvatarFallback>{userInitials}</AvatarFallback>
                     </Avatar>
-                    <div className="flex-1 overflow-hidden">
+                    <div className="flex-1 overflow-hidden group-data-[collapsible=icon]:hidden">
                         <p className="text-sm font-medium truncate">{user?.displayName}</p>
                         <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
                     </div>
                      {auth && (
-                        <Button variant="ghost" size="icon" onClick={() => signOut(auth)}>
+                        <Button variant="ghost" size="icon" onClick={() => signOut(auth)} className="group-data-[collapsible=icon]:w-8 group-data-[collapsible=icon]:h-8">
                             <LogOut className="h-4 w-4" />
                         </Button>
                     )}
@@ -456,11 +457,17 @@ export function GeminiStudio({ }: GeminiStudioProps) {
 
         <SidebarInset>
             <div className='flex flex-col h-full bg-card'>
+                <div className='flex items-center p-2 border-b md:hidden'>
+                    <SidebarTrigger />
+                    <h2 className='text-lg font-semibold ml-4'>
+                      {activeConversation ? activeConversation.title : 'Ny Samtale'}
+                    </h2>
+                </div>
                 <div className='flex-1 overflow-y-auto'>
                     <ScrollArea className="h-full" viewportRef={viewportRef}>
                         <div className="space-y-4 max-w-3xl mx-auto p-4 md:p-6">
                             {(activeConversation?.messages ?? []).length === 0 && (
-                                <div className="flex flex-col items-center justify-center h-full text-center">
+                                <div className="flex h-full items-center justify-center text-center">
                                     <p className="text-muted-foreground">
                                         Indtast en prompt nedenfor for at starte samtalen.
                                     </p>
@@ -555,5 +562,6 @@ export function GeminiStudio({ }: GeminiStudioProps) {
 
 // Minimal props interface
 interface GeminiStudioProps {}
+    
 
     
