@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   OAuthProvider,
   signOut,
 } from 'firebase/auth';
@@ -31,9 +32,62 @@ export default function LoginPage() {
   const router = useRouter();
   const { user, loading, auth } = useAuth();
   const { toast } = useToast();
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(true); // Start i verificeringstilstand
 
-  // This effect redirects the user to the main page if they are logged in.
+  // Denne effekt håndterer svaret efter omdirigering fra Microsoft
+  useEffect(() => {
+    if (!auth) {
+        setIsVerifying(false); // Kan ikke verificere uden auth-service
+        return;
+    };
+
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result) {
+          // Brugeren er logget ind via omdirigering. Valider detaljerne.
+          const loggedInUser = result.user;
+          const userEmail = loggedInUser.email;
+          const tenantId = loggedInUser.tenantId;
+          const requiredDomain = '@sn.dk';
+          const requiredTenantId = process.env.NEXT_PUBLIC_AZURE_AD_TENANT_ID;
+
+          if (!requiredTenantId) {
+            throw new Error('Azure AD Tenant ID er ikke konfigureret korrekt i applikationen. NEXT_PUBLIC_AZURE_AD_TENANT_ID mangler.');
+          }
+          if (!userEmail || !userEmail.endsWith(requiredDomain)) {
+            throw new Error(`Login er kun tilladt for brugere med en ${requiredDomain} e-mailadresse.`);
+          }
+          if (tenantId !== requiredTenantId) {
+            throw new Error(`Login fra en forkert organisation. Brugerens Tenant ID (${tenantId}) matcher ikke applikationens forventede Tenant ID.`);
+          }
+          
+          // Hvis alt er OK, vil den efterfølgende `useEffect` omdirigere til startsiden.
+          toast({
+            title: 'Login succesfuld',
+            description: `Velkommen, ${loggedInUser.displayName}!`,
+          });
+        }
+      })
+      .catch((error) => {
+        // Håndter alle fejl fra omdirigeringsprocessen
+        console.error("Redirect Login Fejl:", error);
+        toast({
+          variant: 'destructive',
+          title: 'Login Fejl',
+          description: error.message || 'Der opstod en ukendt fejl under login.',
+          duration: 9000,
+        });
+        if (auth) {
+          signOut(auth); // Sørg for at logge ud af en potentielt brudt session
+        }
+      })
+      .finally(() => {
+        // Uanset hvad der sker, er verificeringen færdig.
+        setIsVerifying(false);
+      });
+  }, [auth, toast]);
+
+  // Denne effekt omdirigerer brugeren til startsiden, hvis de er logget ind.
   useEffect(() => {
     if (!loading && user) {
       router.push('/');
@@ -60,56 +114,16 @@ export default function LoginPage() {
       return;
     }
 
-    setIsLoggingIn(true);
     const provider = new OAuthProvider('microsoft.com');
     provider.setCustomParameters({
       tenant: requiredTenantId,
     });
-    
-    try {
-        const result = await signInWithPopup(auth, provider);
-        // User is signed in. Now, we MUST validate their details.
-        const loggedInUser = result.user;
-        const userEmail = loggedInUser.email;
-        const tenantId = loggedInUser.tenantId;
-
-        const requiredDomain = '@sn.dk';
-
-        if (!userEmail || !userEmail.endsWith(requiredDomain)) {
-            throw new Error(`Login er kun tilladt for brugere med en ${requiredDomain} e-mailadresse.`);
-        }
-
-        if (tenantId !== requiredTenantId) {
-            throw new Error(`Login fra en forkert organisation. Brugerens Tenant ID (${tenantId}) matcher ikke applikationens forventede Tenant ID.`);
-        }
-        
-        // If all checks pass, we can proceed.
-        toast({
-            title: 'Login succesfuld',
-            description: `Velkommen, ${loggedInUser.displayName}!`,
-        });
-        // The useEffect hook will handle the redirect to '/'
-    } catch (error: any) {
-        // Handle ALL errors here, including validation errors thrown above.
-        console.error("Popup Login/Validation Error:", error);
-        toast({
-          variant: 'destructive',
-          title: 'Login Fejl',
-          description: error.message || 'Der opstod en ukendt fejl under login.',
-          duration: 9000,
-        });
-
-        // If an error occurs, we make sure the user is signed out of any broken session.
-        if (auth) {
-          await signOut(auth);
-        }
-    } finally {
-        setIsLoggingIn(false);
-    }
+    // Start omdirigeringsflowet. Svaret bliver håndteret af `useEffect` ovenfor.
+    await signInWithRedirect(auth, provider);
   };
 
-  // Show a loading state while checking initial auth status.
-  if (loading || user) {
+  // Vis en indlæsningsskærm, mens vi venter på auth-status eller redirect-resultat.
+  if (loading || isVerifying || user) {
      return (
       <div className="flex h-screen w-full items-center justify-center">
         <p>Bekræfter login-status...</p>
@@ -117,7 +131,7 @@ export default function LoginPage() {
     );
   }
 
-  // If not loading and no user, show the login page.
+  // Hvis ikke loading og ingen bruger, vis login-siden.
   return (
     <div className="flex h-screen w-full items-center justify-center bg-background">
        <div className="mx-auto flex w-full max-w-[350px] flex-col justify-center gap-6 text-center">
@@ -133,7 +147,7 @@ export default function LoginPage() {
           <p className="text-sm text-muted-foreground">
             Log ind med din Microsoft-konto for at fortsætte.
           </p>
-        <Button onClick={handleLogin} disabled={isLoggingIn || !auth}>
+        <Button onClick={handleLogin} disabled={loading || isVerifying}>
            <MicrosoftIcon className="mr-2" />
           Login med Microsoft
         </Button>
