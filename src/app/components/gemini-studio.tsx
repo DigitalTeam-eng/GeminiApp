@@ -219,26 +219,30 @@ export function GeminiStudio({ }: GeminiStudioProps) {
         let baseImageDataUris: string[] = filesDataUris || [];
 
         // Smart image gathering: Traverse backwards and collect all recent images
-        // until we hit a message with only text content.
-        if (files.length === 0) {
-            for (let i = currentConv.messages.length - 2; i >= 0; i--) {
-                const msg = currentConv.messages[i];
-                let hasContent = false;
-                if (msg.imageUrl) {
-                    baseImageDataUris.unshift(msg.imageUrl);
-                    hasContent = true;
-                }
-                if (msg.baseImageUrls) {
-                    baseImageDataUris.unshift(...msg.baseImageUrls);
-                    hasContent = true;
-                }
-                // If the message was purely text or a video, stop gathering.
-                if (!hasContent || msg.videoUrl || (msg.content && !msg.imageUrl && !msg.baseImageUrls)) {
-                    break;
-                }
+        // until we hit a message with only text content. This now includes
+        // newly uploaded images AND previous images in the context.
+        for (let i = currentConv.messages.length - 2; i >= 0; i--) {
+            const msg = currentConv.messages[i];
+            let hasContent = false;
+            
+            // Add AI-generated image
+            if (msg.imageUrl) {
+                baseImageDataUris.unshift(msg.imageUrl);
+                hasContent = true;
+            }
+            // Add user-uploaded images from previous turns
+            if (msg.baseImageUrls) {
+                baseImageDataUris.unshift(...msg.baseImageUrls);
+                hasContent = true;
+            }
+
+            // Stop gathering if we hit a message that was purely text or a video,
+            // as this breaks the image context.
+            if (!hasContent || msg.videoUrl || (msg.content && !msg.imageUrl && !msg.baseImageUrls)) {
+                break;
             }
         }
-        // Remove duplicates
+        // Remove duplicates to avoid sending the same image multiple times
         baseImageDataUris = [...new Set(baseImageDataUris)];
 
 
