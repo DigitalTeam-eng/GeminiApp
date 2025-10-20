@@ -91,6 +91,18 @@ export function GeminiStudio({ }: GeminiStudioProps) {
   
   const activeConversation = conversations.find(c => c.id === activeConversationId) ?? null;
 
+  const getUserInitials = (displayName: string | null | undefined): string => {
+    if (!displayName) return 'U';
+    const names = displayName.split(' ');
+    if (names.length > 1) {
+      return (names[0][0] + names[names.length - 1][0]).toUpperCase();
+    }
+    return displayName.substring(0, 2).toUpperCase();
+  };
+
+  const userInitials = getUserInitials(user?.displayName);
+
+
   useEffect(() => {
     if (viewportRef.current) {
       viewportRef.current.scrollTo({
@@ -387,7 +399,7 @@ export function GeminiStudio({ }: GeminiStudioProps) {
                 <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
                         <AvatarImage src={user?.photoURL ?? undefined} />
-                        <AvatarFallback>{user?.displayName?.charAt(0) ?? 'U'}</AvatarFallback>
+                        <AvatarFallback>{userInitials}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 overflow-hidden">
                         <p className="text-sm font-medium truncate">{user?.displayName}</p>
@@ -433,12 +445,14 @@ export function GeminiStudio({ }: GeminiStudioProps) {
                                             key={index}
                                             srcs={message.baseImageUrls}
                                             prompt={message.content ?? ''}
+                                            userInitials={userInitials}
                                         />
                                     ) : (
                                         <ChatBubble
                                             key={index}
                                             role={message.role}
                                             content={message.content ?? ''}
+                                            userInitials={userInitials}
                                         />
                                     );
                                 }

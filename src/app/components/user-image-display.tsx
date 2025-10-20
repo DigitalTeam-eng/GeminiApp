@@ -8,9 +8,10 @@ import { ChatBubble } from './chat-bubble';
 interface UserImageDisplayProps {
   srcs: string[];
   prompt: string;
+  userInitials?: string;
 }
 
-export function UserImageDisplay({ srcs, prompt }: UserImageDisplayProps) {
+export function UserImageDisplay({ srcs, prompt, userInitials }: UserImageDisplayProps) {
   return (
     <div className="flex flex-col items-end gap-2 animate-in fade-in">
         <div className="flex items-start gap-4 justify-end w-full">
@@ -29,11 +30,11 @@ export function UserImageDisplay({ srcs, prompt }: UserImageDisplayProps) {
                 ))}
             </div>
             <Avatar className="h-8 w-8">
-                <AvatarFallback>U</AvatarFallback>
+                <AvatarFallback>{userInitials}</AvatarFallback>
             </Avatar>
         </div>
         {prompt && (
-            <ChatBubble role="user" content={prompt} />
+            <ChatBubble role="user" content={prompt} userInitials={userInitials} />
         )}
     </div>
   );

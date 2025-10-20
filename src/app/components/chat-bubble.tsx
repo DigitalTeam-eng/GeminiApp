@@ -11,9 +11,10 @@ interface ChatBubbleProps {
   role: 'user' | 'assistant';
   content: string;
   model?: string;
+  userInitials?: string;
 }
 
-export function ChatBubble({ role, content, model }: ChatBubbleProps) {
+export function ChatBubble({ role, content, model, userInitials }: ChatBubbleProps) {
   const isUser = role === 'user';
   const isAssistant = role === 'assistant';
 
@@ -50,7 +51,7 @@ export function ChatBubble({ role, content, model }: ChatBubbleProps) {
       </div>
       {isUser && (
         <Avatar className="h-8 w-8">
-            <AvatarFallback>U</AvatarFallback>
+            <AvatarFallback>{userInitials}</AvatarFallback>
         </Avatar>
       )}
     </div>
