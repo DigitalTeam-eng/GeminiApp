@@ -402,7 +402,7 @@ export function GeminiStudio({ }: GeminiStudioProps) {
       <main className="flex flex-col flex-1">
          <div className='flex flex-col h-full bg-card'>
          <header className="flex items-center gap-4 p-4 border-b shrink-0">
-          <SidebarTrigger className="md:hidden" />
+          <SidebarTrigger />
           <h1 className="text-xl font-bold">Gemini Studie</h1>
         </header>
         <div className='flex-1 overflow-y-auto'>
