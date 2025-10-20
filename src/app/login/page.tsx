@@ -82,8 +82,9 @@ export default function LoginPage() {
       const requiredDomain = '@sn.dk';
 
       // Robust tenant ID validation via id_token
-      const additionalUserInfo = getAdditionalUserInfo(result);
-      const idToken = additionalUserInfo?.profile?.id_token;
+      const credential = OAuthProvider.credentialFromResult(result);
+      const idToken = credential?.idToken;
+
 
       if (!idToken) {
           throw new Error("Kunne ikke verificere organisation. ID-token mangler.");
