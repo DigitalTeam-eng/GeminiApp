@@ -45,10 +45,10 @@ export function FormattedContent({ content }: FormattedContentProps) {
                                 onClick={handleCopy}
                                 size="icon"
                                 variant="ghost"
-                                className="absolute top-2 right-2 h-7 w-7 transition-opacity"
+                                className="absolute top-2 right-2 h-7 w-7"
                                 aria-label="Kopier kode"
                             >
-                                {isCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                                {isCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4 text-neutral-300 hover:text-white" />}
                             </Button>
                         </div>
                     ) : (
