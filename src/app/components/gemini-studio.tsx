@@ -7,7 +7,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -86,8 +85,8 @@ export function GeminiStudio({ }: GeminiStudioProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const viewportRef = useRef<HTMLDivElement>(null);
-  const { user } = useUser();
   const auth = useAuth();
+  const { user } = auth;
   
   const activeConversation = conversations.find(c => c.id === activeConversationId) ?? null;
 
@@ -408,8 +407,8 @@ export function GeminiStudio({ }: GeminiStudioProps) {
                         <p className="text-sm font-medium truncate">{user?.displayName}</p>
                         <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
                     </div>
-                    {auth && (
-                        <Button variant="ghost" size="icon" onClick={() => signOut(auth)}>
+                    {auth && auth.instance && (
+                        <Button variant="ghost" size="icon" onClick={() => signOut(auth.instance)}>
                             <LogOut className="h-4 w-4" />
                         </Button>
                     )}
@@ -424,14 +423,6 @@ export function GeminiStudio({ }: GeminiStudioProps) {
                         <div className="space-y-4 max-w-3xl mx-auto p-4 md:p-6">
                             {(activeConversation?.messages ?? []).length === 0 && (
                                 <div className="flex flex-col items-center justify-center h-full text-center">
-                                    <Image 
-                                        src="https://firebasestorage.googleapis.com/v0/b/marketplan-canvas.firebasestorage.app/o/Sj%C3%A6llandske_Nyheder_Bred_RGB_ny.png?alt=media&token=a37e81ab-1d4b-4913-bab2-c35a5fda6056"
-                                        alt="Sjællandske Medier logo"
-                                        width={200}
-                                        height={50}
-                                        priority
-                                        className='mb-4'
-                                    />
                                     <p className="text-muted-foreground">
                                         Indtast en prompt nedenfor for at starte samtalen.
                                     </p>
