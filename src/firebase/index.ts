@@ -1,3 +1,4 @@
+
 'use client';
 
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
@@ -8,22 +9,9 @@ import { getFirestore } from 'firebase/firestore'
 export function initializeFirebase() {
   if (!getApps().length) {
     
-    // This logic ensures the correct authDomain is used for both local dev and deployment.
-    // It's critical for non-Firebase hosting environments like Azure.
-    const getAuthDomain = () => {
-        if (typeof window !== 'undefined') {
-            // Using window.location.host is the most robust way to get the correct
-            // hostname and port, regardless of the environment (localhost, cloud workstation, or deployed).
-            return window.location.host;
-        }
-        // Fallback for server-side rendering, though auth is client-side.
-        // This value is less critical as client-side will always take precedence.
-        return process.env.NEXT_PUBLIC_VERCEL_URL || 'localhost:9002';
-    };
-
     const firebaseConfig = {
       "apiKey": "AIzaSyBXs4Zt7FZI7ibU1pmSuF1LT4_J9mIutJA",
-      "authDomain": getAuthDomain(),
+      "authDomain": "studio-6932359731-5d066.firebaseapp.com",
       "projectId": "studio-6932359731-5d066"
     };
     
