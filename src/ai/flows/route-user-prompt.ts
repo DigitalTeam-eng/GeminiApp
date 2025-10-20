@@ -27,7 +27,7 @@ import {
 
 const RouteUserPromptInputSchema = z.object({
   prompt: z.string().describe('The user prompt to analyze and route.'),
-  baseImageDataUris: z.array(z.string()).optional().describe('Optional base images for image-to-image tasks.'),
+  baseImageDataUris: z.array(z.string()).optional().describe('Optional base images/videos for image-to-image or video-to-video tasks.'),
   history: z.array(z.any()).optional().describe('Conversation history.'),
 });
 type RouteUserPromptInput = z.infer<typeof RouteUserPromptInputSchema>;
@@ -54,6 +54,9 @@ const routeUserPromptFlow = ai.defineFlow(
   async (input) => {
     let modelToUse: string;
 
+    const hasMedia = input.baseImageDataUris && input.baseImageDataUris.length > 0;
+    const isVideoContext = hasMedia && input.baseImageDataUris!.some(uri => uri.startsWith('data:video/'));
+
     // Ask the model to classify the prompt.
     const classificationPrompt = ai.definePrompt({
         name: 'classifyPrompt',
@@ -72,18 +75,18 @@ const routeUserPromptFlow = ai.defineFlow(
 
     const { output } = await classificationPrompt({ prompt: input.prompt });
 
-    if (output?.task === 'video_generation') {
+    if (output?.task === 'video_generation' || isVideoContext) {
         modelToUse = 'Veo';
         const videoInput: GenerateVideoFromPromptInput = {
             promptText: input.prompt,
-            baseImage: input.baseImageDataUris?.[0]
+            baseImage: input.baseImageDataUris?.[0] // Pass the video or image as context
         };
         const result = await generateVideoFromPrompt(videoInput);
         return { type: 'video', result, model: modelToUse };
     }
 
-    if (output?.task === 'image_generation' || (input.baseImageDataUris && input.baseImageDataUris.length > 0)) {
-        modelToUse = (input.baseImageDataUris && input.baseImageDataUris.length > 0) ? 'Gemini Flash Image' : 'Imagen';
+    if (output?.task === 'image_generation' || hasMedia) {
+        modelToUse = hasMedia ? 'Gemini Flash Image' : 'Imagen';
         const imageInput: GenerateImageFromPromptInput = {
             promptText: input.prompt,
             baseImages: input.baseImageDataUris?.map(dataUri => ({ dataUri }))

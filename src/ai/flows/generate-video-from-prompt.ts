@@ -15,10 +15,13 @@ import { Part } from '@genkit-ai/googleai';
 import { googleAI } from '@genkit-ai/googleai';
 
 // Helper function to parse a data URI
-function parseDataUri(dataUri: string): { mimeType: string; base64Data: string } {
+function parseDataUri(dataUri: string): { mimeType: string; base64Data: string } | null {
   const match = dataUri.match(/^data:(.+);base64,(.*)$/);
   if (!match) {
-    throw new Error('Invalid data URI format');
+    // It might not be a data URI, e.g., a file API URL from Veo itself.
+    // For now, we only handle data URIs as input from the client.
+    console.warn("Could not parse data URI:", dataUri.substring(0, 50) + "...");
+    return null;
   }
   return { mimeType: match[1], base64Data: match[2] };
 }
@@ -27,7 +30,7 @@ function parseDataUri(dataUri: string): { mimeType: string; base64Data: string }
 const GenerateVideoFromPromptInputSchema = z.object({
   promptText: z.string().describe('The text prompt to use for generating the video.'),
   baseImage: z.string().optional().describe(
-    "An optional base image for image-to-video generation, as a data URI."
+    "An optional base image/video for generation, as a data URI."
   ),
 });
 export type GenerateVideoFromPromptInput = z.infer<typeof GenerateVideoFromPromptInputSchema>;
@@ -52,20 +55,14 @@ const generateVideoFromPromptFlow = ai.defineFlow(
   async input => {
     const promptParts: Part[] = [{ text: input.promptText }];
     if (input.baseImage) {
-      // The Veo model expects a different format than a direct data URI.
-      // We need to parse the data URI and provide an object with mimeType and bytesBase64Encoded.
-      try {
-        const { mimeType, base64Data } = parseDataUri(input.baseImage);
+      const parsed = parseDataUri(input.baseImage);
+      if (parsed) {
         promptParts.push({
           media: {
-            contentType: mimeType,
-            // The API for Veo via `ai.generate` expects the `url` property to contain the base64 data directly for this structure.
-            // This is a nuance of how Genkit wraps the underlying Google AI API.
-            url: `data:${mimeType};base64,${base64Data}`, // Reconstruct for the API, underlying handler knows what to do
+            contentType: parsed.mimeType,
+            url: `data:${parsed.mimeType};base64,${parsed.base64Data}`,
           },
         });
-      } catch (e: any) {
-        throw new Error(`Failed to parse base image data URI: ${e.message}`);
       }
     }
 

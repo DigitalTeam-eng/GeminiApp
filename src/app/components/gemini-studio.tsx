@@ -217,33 +217,21 @@ export function GeminiStudio({ }: GeminiStudioProps) {
         }
         
         let baseImageDataUris: string[] = filesDataUris || [];
-
-        // Smart image gathering: Traverse backwards and collect all recent images
-        // until we hit a message with only text content. This now includes
-        // newly uploaded images AND previous images in the context.
-        for (let i = currentConv.messages.length - 2; i >= 0; i--) {
-            const msg = currentConv.messages[i];
-            let hasContent = false;
-            
-            // Add AI-generated image
-            if (msg.imageUrl) {
-                baseImageDataUris.unshift(msg.imageUrl);
-                hasContent = true;
-            }
-            // Add user-uploaded images from previous turns
-            if (msg.baseImageUrls) {
-                baseImageDataUris.unshift(...msg.baseImageUrls);
-                hasContent = true;
-            }
-
-            // Stop gathering if we hit a message that was purely text or a video,
-            // as this breaks the image context.
-            if (!hasContent || msg.videoUrl || (msg.content && !msg.imageUrl && !msg.baseImageUrls)) {
-                break;
+        
+        // If there's no new files, check previous messages for context
+        if (baseImageDataUris.length === 0 && currentConv.messages.length > 1) {
+            const lastMessage = currentConv.messages[currentConv.messages.length - 2];
+            if (lastMessage.role === 'assistant') {
+                // If the last message was an AI-generated image or video, use it as context
+                if (lastMessage.imageUrl) {
+                    baseImageDataUris.push(lastMessage.imageUrl);
+                }
+                // Also handle video context
+                if (lastMessage.videoUrl) {
+                    baseImageDataUris.push(lastMessage.videoUrl);
+                }
             }
         }
-        // Remove duplicates to avoid sending the same image multiple times
-        baseImageDataUris = [...new Set(baseImageDataUris)];
 
 
         const history: HistoryMessage[] = currentConv.messages
