@@ -94,10 +94,13 @@ export function GeminiStudio({ }: GeminiStudioProps) {
   const getUserInitials = (displayName: string | null | undefined): string => {
     if (!displayName) return 'U';
     const names = displayName.split(' ');
-    if (names.length > 1) {
+    if (names.length > 1 && names[0] && names[names.length - 1]) {
       return (names[0][0] + names[names.length - 1][0]).toUpperCase();
     }
-    return displayName.substring(0, 2).toUpperCase();
+    if (displayName.length > 1) {
+      return displayName.substring(0, 2).toUpperCase();
+    }
+    return 'U';
   };
 
   const userInitials = getUserInitials(user?.displayName);
