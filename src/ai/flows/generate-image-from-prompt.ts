@@ -61,6 +61,7 @@ const generateImageFromPromptFlow = ai.defineFlow(
     let promptForModel: (string | Part)[] | string;
     let config: any = {};
     
+    // Loosen safety settings to avoid blocking harmless prompts
     const safetySettings = [
       { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
       { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
@@ -95,7 +96,7 @@ const generateImageFromPromptFlow = ai.defineFlow(
       // Text-to-image generation
       modelToUse = 'googleai/imagen-4.0-fast-generate-001';
       promptForModel = input.promptText;
-      config = { safetySettings }; 
+      // No extra config needed for Imagen beyond safety settings
     }
 
     const { media } = await ai.generate({
