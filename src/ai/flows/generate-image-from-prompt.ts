@@ -68,35 +68,34 @@ const generateImageFromPromptFlow = ai.defineFlow(
       { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
     ];
     
-    config = { responseModalities: ['TEXT', 'IMAGE'], safetySettings };
+    config = { safetySettings };
 
     if (input.baseImages && input.baseImages.length > 0) {
       modelToUse = 'googleai/gemini-2.5-flash-image-preview'; // "Nano Banana"
       
-      const transparencyKeywords = ['transparent', 'gennemsigtig', 'remove background'];
+      const transparencyKeywords = ['transparent', 'gennemsigtig', 'remove background', 'skift baggrund'];
       const requiresTransparency = transparencyKeywords.some(keyword =>
         input.promptText.toLowerCase().includes(keyword)
       );
       
       let finalPromptText = input.promptText;
 
-      if (requiresTransparency) {
-        // This is a more reliable prompt to isolate the subject.
-        finalPromptText = "Isolate the main subject from the background. Make the background a solid black color. Do not add any shadows or reflections to the background. Only the main subject should be visible against the black background."
+      if (requiresTransparency && (input.promptText.toLowerCase().includes('remove') || input.promptText.toLowerCase().includes('skift'))) {
+        finalPromptText = "Isolate the main subject from the background. Make the background transparent. Do not add any shadows or reflections."
       }
 
-      // Default image-to-image 
       const promptParts: Part[] = [{ text: finalPromptText }];
       input.baseImages.forEach(image => {
         promptParts.push({ media: { url: image.dataUri } });
       });
       promptForModel = promptParts;
+      config = { ...config, responseModalities: ['IMAGE'] };
       
     } else {
       // Text-to-image generation
       modelToUse = 'googleai/imagen-4.0-fast-generate-001';
       promptForModel = input.promptText;
-      config = {}; // Reset config for text-to-image
+      config = { safetySettings }; 
     }
 
     const { media } = await ai.generate({
