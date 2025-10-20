@@ -42,26 +42,43 @@ export async function generateResponse(
 
   const { prompt, baseImageDataUris, history } = validatedFields.data;
 
-  try {
-    const routeInput: RouteUserPromptInput = {
+  const routeInput: RouteUserPromptInput = {
       prompt: prompt,
       baseImageDataUris: baseImageDataUris,
       history: (history as HistoryMessage[]) || [],
-    };
-    const result = await routeUserPrompt(routeInput);
+  };
 
-    if (result.type === 'image') {
-       return { data: { type: 'image', model: result.model, ...result.result } };
-    } else if (result.type === 'video') {
-      return { data: { type: 'video', model: result.model, ...result.result } };
-    } else {
-       return { data: { type: 'text', model: result.model, ...result.result } };
+  const MAX_RETRIES = 3;
+  let lastError: any = null;
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const result = await routeUserPrompt(routeInput);
+
+      if (result.type === 'image') {
+        return { data: { type: 'image', model: result.model, ...result.result } };
+      } else if (result.type === 'video') {
+        return { data: { type: 'video', model: result.model, ...result.result } };
+      } else {
+        return { data: { type: 'text', model: result.model, ...result.result } };
+      }
+    } catch (e: any) {
+      lastError = e;
+      const isRetryableError = e.message?.includes('FAILED_PRECONDITION');
+      
+      if (isRetryableError && attempt < MAX_RETRIES) {
+        console.log(`Attempt ${attempt} failed with retryable error. Retrying...`);
+        await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms before retrying
+      } else {
+        // This was the last attempt or a non-retryable error
+        console.error(e);
+        return { error: e.message || 'Der opstod en uventet fejl.' };
+      }
     }
-    
-  } catch (e: any) {
-    console.error(e);
-    return { error: e.message || 'Der opstod en uventet fejl.' };
   }
+
+  // This should not be reached, but as a fallback:
+  return { error: lastError?.message || 'Der opstod en uventet fejl efter flere forsøg.' };
 }
 
 const generateTitleSchema = z.object({
