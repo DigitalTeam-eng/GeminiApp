@@ -19,7 +19,7 @@ import { generateResponse, generateConversationTitle } from '@/app/actions';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { UserImageDisplay } from './user-image-display';
 import type { HistoryMessage } from '@/ai/flows/generate-text-from-prompt';
-import { useUser, useAuth } from '@/firebase';
+import { useUser, useAuth } from '@/app/auth/auth-provider';
 import {
   Sidebar,
   SidebarContent,
@@ -72,9 +72,7 @@ export interface Conversation {
   messages: Message[];
 }
 
-interface GeminiStudioProps {
-}
-
+const LOCAL_STORAGE_KEY = 'gemini-studio-conversations';
 
 export function GeminiStudio({ }: GeminiStudioProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -85,10 +83,36 @@ export function GeminiStudio({ }: GeminiStudioProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const viewportRef = useRef<HTMLDivElement>(null);
-  const auth = useAuth();
-  const { user } = auth;
+  const { user, auth } = useAuth();
   
   const activeConversation = conversations.find(c => c.id === activeConversationId) ?? null;
+
+  // Load conversations from localStorage on initial render
+  useEffect(() => {
+    try {
+      const savedConversations = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (savedConversations) {
+        setConversations(JSON.parse(savedConversations));
+      }
+    } catch (error) {
+      console.error("Failed to load conversations from localStorage", error);
+    }
+  }, []);
+
+  // Save conversations to localStorage whenever they change
+  useEffect(() => {
+    try {
+        if (conversations.length > 0) {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(conversations));
+        } else {
+            // If there are no conversations, remove the item from localStorage
+            localStorage.removeItem(LOCAL_STORAGE_KEY);
+        }
+    } catch (error) {
+      console.error("Failed to save conversations to localStorage", error);
+    }
+  }, [conversations]);
+
 
   const getUserInitials = (displayName: string | null | undefined): string => {
     if (!displayName) return 'U';
@@ -407,8 +431,8 @@ export function GeminiStudio({ }: GeminiStudioProps) {
                         <p className="text-sm font-medium truncate">{user?.displayName}</p>
                         <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
                     </div>
-                    {auth && auth.instance && (
-                        <Button variant="ghost" size="icon" onClick={() => signOut(auth.instance)}>
+                     {auth && (
+                        <Button variant="ghost" size="icon" onClick={() => signOut(auth)}>
                             <LogOut className="h-4 w-4" />
                         </Button>
                     )}
@@ -514,3 +538,8 @@ export function GeminiStudio({ }: GeminiStudioProps) {
     </SidebarProvider>
   );
 }
+
+// Minimal props interface
+interface GeminiStudioProps {}
+
+    
