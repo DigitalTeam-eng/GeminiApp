@@ -41,16 +41,10 @@ const generateTextFromPromptFlow = ai.defineFlow(
     outputSchema: GenerateTextFromPromptOutputSchema,
   },
   async input => {
-    // Gemini 1.5 Flash expects a flat array of strings for history, not role-based objects.
-    const promptHistory: string[] = (input.history || []).map(msg => msg.content);
     
-    const promptForModel = [
-      ...promptHistory,
-      input.prompt
-    ];
-
     const {text} = await ai.generate({
-        prompt: promptForModel,
+        prompt: input.prompt,
+        history: input.history,
     });
     return {response: text};
   }

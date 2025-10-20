@@ -14,6 +14,7 @@ import {z} from 'genkit';
 import {
     generateTextFromPrompt,
     GenerateTextFromPromptInput,
+    HistoryMessage,
 } from './generate-text-from-prompt';
 import {
     generateImageFromPrompt,
@@ -62,13 +63,13 @@ const routeUserPromptFlow = ai.defineFlow(
         name: 'classifyPrompt',
         input: { schema: z.object({ prompt: z.string() }) },
         output: { schema: z.object({ task: z.enum(['image_generation', 'video_generation', 'text_generation']) }) },
-        prompt: `Analyze the following user prompt and classify the primary task as 'image_generation', 'video_generation', or 'text_generation'.
+        prompt: `Analyze the following user prompt and classify the primary task.
 
         User Prompt: "{{prompt}}"
 
-        - If the prompt explicitly asks to "draw", "create an image", "generate a picture", or similar artistic commands, classify it as 'image_generation'.
+        - If the prompt explicitly asks to "draw", "create an image", "generate a picture", "make an illustration", "lav en illustration", or contains a detailed visual description for an image, classify it as 'image_generation'.
         - If the prompt explicitly asks to "animate", "create a video", "make it move", or similar animation commands, classify it as 'video_generation'.
-        - For all other queries, including questions, requests for information, code, or text, classify it as 'text_generation'.
+        - For all other queries, including questions, requests for information, code, or general conversation, classify it as 'text_generation'.
 
         Respond with only the classification in JSON format.`,
     });
@@ -99,7 +100,7 @@ const routeUserPromptFlow = ai.defineFlow(
     modelToUse = 'Gemini Flash';
     const textInput: GenerateTextFromPromptInput = { 
         prompt: input.prompt,
-        history: input.history || []
+        history: (input.history as HistoryMessage[]) || [],
     };
     const result = await generateTextFromPrompt(textInput);
     return { type: 'text', result, model: modelToUse };
