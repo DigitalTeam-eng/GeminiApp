@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -40,7 +39,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const value = { 
       user, 
       loading: isUserLoading, 
-      logout: handleSignOut, // backwards compatibility
+      logout: handleSignOut,
       signOut: handleSignOut,
       auth, 
       firebaseApp, 

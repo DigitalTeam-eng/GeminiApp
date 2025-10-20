@@ -20,7 +20,7 @@ import { generateResponse, generateConversationTitle } from '@/app/actions';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { UserImageDisplay } from './user-image-display';
 import type { HistoryMessage } from '@/ai/flows/generate-text-from-prompt';
-import { useUser, useAuth as useFirebaseAuth } from '@/firebase';
+import { useUser, useAuth } from '@/firebase';
 import {
   Sidebar,
   SidebarContent,
@@ -87,7 +87,7 @@ export function GeminiStudio({ }: GeminiStudioProps) {
   const { toast } = useToast();
   const viewportRef = useRef<HTMLDivElement>(null);
   const { user } = useUser();
-  const firebaseAuth = useFirebaseAuth();
+  const auth = useAuth();
   
   const activeConversation = conversations.find(c => c.id === activeConversationId) ?? null;
 
@@ -408,8 +408,8 @@ export function GeminiStudio({ }: GeminiStudioProps) {
                         <p className="text-sm font-medium truncate">{user?.displayName}</p>
                         <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
                     </div>
-                    {firebaseAuth.auth && (
-                        <Button variant="ghost" size="icon" onClick={() => firebaseAuth.auth && signOut(firebaseAuth.auth)}>
+                    {auth && (
+                        <Button variant="ghost" size="icon" onClick={() => signOut(auth)}>
                             <LogOut className="h-4 w-4" />
                         </Button>
                     )}
