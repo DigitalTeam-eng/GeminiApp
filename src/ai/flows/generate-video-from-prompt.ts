@@ -18,8 +18,6 @@ import { googleAI } from '@genkit-ai/googleai';
 function parseDataUri(dataUri: string): { mimeType: string; base64Data: string } | null {
   const match = dataUri.match(/^data:(.+);base64,(.*)$/);
   if (!match) {
-    // It might not be a data URI, e.g., a file API URL from Veo itself.
-    // For now, we only handle data URIs as input from the client.
     console.warn("Could not parse data URI:", dataUri.substring(0, 50) + "...");
     return null;
   }
@@ -54,15 +52,23 @@ const generateVideoFromPromptFlow = ai.defineFlow(
   },
   async input => {
     const promptParts: Part[] = [{ text: input.promptText }];
+    
+    // Veo can animate an image, but cannot edit a video.
+    // So, we only add the media part if it's an image.
     if (input.baseImage) {
       const parsed = parseDataUri(input.baseImage);
-      if (parsed) {
+      // Check if the mimeType starts with 'image/'
+      if (parsed && parsed.mimeType.startsWith('image/')) {
         promptParts.push({
           media: {
             contentType: parsed.mimeType,
             url: `data:${parsed.mimeType};base64,${parsed.base64Data}`,
           },
         });
+      } else {
+        // If it's a video or other format, we don't include it.
+        // Veo will generate a new video based on the text prompt alone.
+        console.log('Input is a video, generating new video from text only.');
       }
     }
 
