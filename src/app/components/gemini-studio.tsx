@@ -30,6 +30,7 @@ import {
   SidebarMenuAction,
   SidebarFooter,
   SidebarProvider,
+  SidebarInset,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
@@ -400,7 +401,7 @@ export function GeminiStudio({ }: GeminiStudioProps) {
               </div>
         </SidebarFooter>
       </Sidebar>
-      <main className="flex flex-col flex-1">
+      <SidebarInset>
          <div className='flex flex-col h-full bg-card'>
          <header className="flex items-center gap-4 p-4 border-b shrink-0">
           <h1 className="text-xl font-bold">Gemini Studie</h1>
@@ -487,7 +488,7 @@ export function GeminiStudio({ }: GeminiStudioProps) {
           </div>
         </div>
       </div>
-      </main>
+      </SidebarInset>
 
       <AlertDialog open={!!deletingConversationId} onOpenChange={(open) => !open && setDeletingConversationId(null)}>
         <AlertDialogContent>
@@ -507,3 +508,5 @@ export function GeminiStudio({ }: GeminiStudioProps) {
     </SidebarProvider>
   );
 }
+
+    
