@@ -318,7 +318,7 @@ export function GeminiStudio({ }: GeminiStudioProps) {
   return (
     <SidebarProvider>
       <div className="h-screen w-full flex">
-        <Sidebar side="left" variant="sidebar" collapsible="offcanvas">
+        <Sidebar side="left" collapsible="offcanvas">
             <SidebarHeader>
                 <div className="flex items-center gap-2">
                     <Image
@@ -328,7 +328,7 @@ export function GeminiStudio({ }: GeminiStudioProps) {
                         height={37}
                         priority
                     />
-                    <SidebarTrigger className="ml-auto" />
+                    <SidebarTrigger className="ml-auto md:hidden" />
                 </div>
             </SidebarHeader>
             <SidebarContent className="p-2 flex flex-col">
