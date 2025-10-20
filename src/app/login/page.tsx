@@ -109,7 +109,7 @@ export default function LoginPage() {
   };
 
   // Show a loading state while checking initial auth status.
-  if (loading) {
+  if (loading || user) {
      return (
       <div className="flex h-screen w-full items-center justify-center">
         <p>Bekræfter login-status...</p>
