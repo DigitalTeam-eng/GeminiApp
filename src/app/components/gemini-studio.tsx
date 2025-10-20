@@ -419,10 +419,6 @@ export function GeminiStudio({ }: GeminiStudioProps) {
 
         <SidebarInset>
             <div className='flex flex-col h-full bg-card'>
-                <header className="flex items-center gap-4 p-4 border-b shrink-0 md:hidden">
-                    <SidebarTrigger />
-                    <h1 className="text-xl font-bold">Gemini Studie</h1>
-                </header>
                 <div className='flex-1 overflow-y-auto'>
                     <ScrollArea className="h-full" viewportRef={viewportRef}>
                         <div className="space-y-4 max-w-3xl mx-auto p-4 md:p-6">
