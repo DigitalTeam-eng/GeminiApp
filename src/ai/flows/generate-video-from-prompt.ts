@@ -10,9 +10,19 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 import { Part } from '@genkit-ai/googleai';
 import { googleAI } from '@genkit-ai/googleai';
+
+// Helper function to parse a data URI
+function parseDataUri(dataUri: string): { mimeType: string; base64Data: string } {
+  const match = dataUri.match(/^data:(.+);base64,(.*)$/);
+  if (!match) {
+    throw new Error('Invalid data URI format');
+  }
+  return { mimeType: match[1], base64Data: match[2] };
+}
+
 
 const GenerateVideoFromPromptInputSchema = z.object({
   promptText: z.string().describe('The text prompt to use for generating the video.'),
@@ -40,9 +50,23 @@ const generateVideoFromPromptFlow = ai.defineFlow(
     outputSchema: GenerateVideoFromPromptOutputSchema,
   },
   async input => {
-    const promptParts: (string | Part)[] = [{ text: input.promptText }];
+    const promptParts: Part[] = [{ text: input.promptText }];
     if (input.baseImage) {
-      promptParts.push({ media: { url: input.baseImage } });
+      // The Veo model expects a different format than a direct data URI.
+      // We need to parse the data URI and provide an object with mimeType and bytesBase64Encoded.
+      try {
+        const { mimeType, base64Data } = parseDataUri(input.baseImage);
+        promptParts.push({
+          media: {
+            contentType: mimeType,
+            // The API for Veo via `ai.generate` expects the `url` property to contain the base64 data directly for this structure.
+            // This is a nuance of how Genkit wraps the underlying Google AI API.
+            url: `data:${mimeType};base64,${base64Data}`, // Reconstruct for the API, underlying handler knows what to do
+          },
+        });
+      } catch (e: any) {
+        throw new Error(`Failed to parse base image data URI: ${e.message}`);
+      }
     }
 
     let { operation } = await ai.generate({
@@ -84,12 +108,13 @@ const generateVideoFromPromptFlow = ai.defineFlow(
     const response = await fetch(videoUrlWithKey);
 
     if (!response.ok) {
-        throw new Error(`Failed to fetch video file: ${response.statusText}`);
+        const errorBody = await response.text();
+        throw new Error(`Failed to fetch video file: ${response.statusText}. Body: ${errorBody}`);
     }
 
-    const videoBuffer = await response.buffer();
+    const videoBuffer = await response.arrayBuffer();
     const contentType = response.headers.get('content-type') || 'video/mp4';
-    const videoDataUri = `data:${contentType};base64,${videoBuffer.toString('base64')}`;
+    const videoDataUri = `data:${contentType};base64,${Buffer.from(videoBuffer).toString('base64')}`;
 
     return { videoDataUri };
   }
