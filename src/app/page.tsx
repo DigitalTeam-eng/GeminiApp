@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -41,10 +42,8 @@ export default function Home() {
 
   // If the user is logged in, show the main application
   return (
-    <GeminiStudio
-      activeConversation={null}
-      onNewConversation={async () => null}
-      onUpdateConversation={() => {}}
-    />
+    <GeminiStudio />
   );
 }
+
+    

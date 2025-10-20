@@ -19,7 +19,7 @@ import { generateResponse, generateConversationTitle } from '@/app/actions';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { UserImageDisplay } from './user-image-display';
 import type { HistoryMessage } from '@/ai/flows/generate-text-from-prompt';
-import { useUser, useAuth } from '@/firebase';
+import { useUser, useAuth as useFirebaseAuth } from '@/firebase';
 import {
   Sidebar,
   SidebarContent,
@@ -70,9 +70,6 @@ export interface Conversation {
 }
 
 interface GeminiStudioProps {
-  activeConversation: Conversation | null;
-  onNewConversation: (prompt: string, initialMessage: Message) => Promise<Conversation | null>;
-  onUpdateConversation: (conversation: Conversation) => void;
 }
 
 
@@ -86,7 +83,7 @@ export function GeminiStudio({ }: GeminiStudioProps) {
   const { toast } = useToast();
   const viewportRef = useRef<HTMLDivElement>(null);
   const { user } = useUser();
-  const auth = useAuth();
+  const firebaseAuth = useFirebaseAuth();
   
   const activeConversation = conversations.find(c => c.id === activeConversationId) ?? null;
 
@@ -134,6 +131,10 @@ export function GeminiStudio({ }: GeminiStudioProps) {
 
   const handleSelectConversation = (id: string) => {
     setActiveConversationId(id);
+  };
+  
+  const handleStartNewConversation = () => {
+    setActiveConversationId(null);
   };
 
   const startRename = (conversation: Conversation) => {
@@ -212,8 +213,14 @@ export function GeminiStudio({ }: GeminiStudioProps) {
             handleUpdateConversation(conversationWithUserMessage);
             currentConv = conversationWithUserMessage;
         }
+        
+        let baseImageDataUris: string[] = filesDataUris || [];
 
-        const baseImageDataUris: string[] = filesDataUris || [];
+        // Check if the last message from assistant was an image and no new files were attached
+        const lastMessage = currentConv.messages[currentConv.messages.length - 2];
+        if (files.length === 0 && lastMessage?.role === 'assistant' && lastMessage.imageUrl) {
+            baseImageDataUris.push(lastMessage.imageUrl);
+        }
 
         const history: HistoryMessage[] = currentConv.messages
           .slice(0, -1)
@@ -279,7 +286,7 @@ export function GeminiStudio({ }: GeminiStudioProps) {
             </div>
         </SidebarHeader>
         <SidebarContent className="p-2 flex flex-col">
-            <Button variant="outline" className='w-full justify-start' onClick={() => setActiveConversationId(null)}>
+            <Button variant="outline" className='w-full justify-start' onClick={handleStartNewConversation}>
                 <Plus className="mr-2 h-4 w-4" />
                 Ny samtale
             </Button>
@@ -340,9 +347,11 @@ export function GeminiStudio({ }: GeminiStudioProps) {
                       <p className="text-sm font-medium truncate">{user?.displayName}</p>
                       <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => auth.signOut()}>
-                      <LogOut className="h-4 w-4" />
-                  </Button>
+                  {firebaseAuth && (
+                    <Button variant="ghost" size="icon" onClick={() => firebaseAuth.signOut()}>
+                        <LogOut className="h-4 w-4" />
+                    </Button>
+                  )}
               </div>
         </SidebarFooter>
       </Sidebar>
@@ -356,7 +365,15 @@ export function GeminiStudio({ }: GeminiStudioProps) {
             <ScrollArea className="h-full" viewportRef={viewportRef}>
             <div className="space-y-4 max-w-3xl mx-auto p-4 md:p-6">
               {(activeConversation?.messages ?? []).length === 0 && (
-                   <div className="flex items-center justify-center h-full">
+                   <div className="flex flex-col items-center justify-center h-full text-center">
+                      <Image 
+                        src="https://firebasestorage.googleapis.com/v0/b/marketplan-canvas.firebasestorage.app/o/Sj%C3%A6llandske_Nyheder_Bred_RGB_ny.png?alt=media&token=a37e81ab-1d4b-4913-bab2-c35a5fda6056"
+                        alt="Sjællandske Medier logo"
+                        width={200}
+                        height={50}
+                        priority
+                        className='mb-4'
+                      />
                       <p className="text-muted-foreground">
                           Indtast en prompt nedenfor for at starte samtalen.
                       </p>
@@ -431,3 +448,5 @@ export function GeminiStudio({ }: GeminiStudioProps) {
     </SidebarProvider>
   );
 }
+
+    

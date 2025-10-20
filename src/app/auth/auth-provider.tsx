@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -24,7 +25,7 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const { user, isUserLoading, auth } = useFirebase(); 
+  const { user, isUserLoading, auth, firebaseApp, firestore } = useFirebase(); 
   const router = useRouter();
 
   const logout = async () => {
@@ -34,11 +35,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const value = { 
+      user, 
+      loading: isUserLoading, 
+      logout, 
+      auth, 
+      // Expose other services if needed, though often not necessary in AuthContext
+      firebaseApp, 
+      firestore 
+  };
+
+
   return (
-    <AuthContext.Provider value={{ user, loading: isUserLoading, logout, auth }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => useContext(AuthContext);
+
+    
