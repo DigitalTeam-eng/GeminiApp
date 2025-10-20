@@ -146,7 +146,7 @@ export default function LoginPage() {
           priority
           className="mx-auto"
         />
-        <h1 className="text-3xl font-semibold tracking-tight">Gemini Studie</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Gemini App</h1>
         <p className="text-sm text-muted-foreground">
           Log ind med din Microsoft-konto for at fortsætte.
         </p>

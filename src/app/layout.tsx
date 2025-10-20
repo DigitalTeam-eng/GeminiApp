@@ -2,11 +2,11 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import { AuthProvider } from '@/app/auth/auth-provider';
+import { AuthProvider, useAuth } from '@/app/auth/auth-provider';
 import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
-  title: 'Gemini Studie',
+  title: 'Gemini App',
   description: 'Et interface til at interagere med Gemini AI-modeller.',
 };
 
