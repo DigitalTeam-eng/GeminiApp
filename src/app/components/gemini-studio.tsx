@@ -19,7 +19,7 @@ import { generateResponse, generateConversationTitle } from '@/app/actions';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { UserImageDisplay } from './user-image-display';
 import type { HistoryMessage } from '@/ai/flows/generate-text-from-prompt';
-import { useUser, useAuth } from '@/app/auth/auth-provider';
+import { useAuth } from '@/app/auth/auth-provider';
 import {
   Sidebar,
   SidebarContent,
@@ -102,16 +102,30 @@ export function GeminiStudio({ }: GeminiStudioProps) {
   // Save conversations to localStorage whenever they change
   useEffect(() => {
     try {
-        if (conversations.length > 0) {
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(conversations));
-        } else {
-            // If there are no conversations, remove the item from localStorage
-            localStorage.removeItem(LOCAL_STORAGE_KEY);
-        }
+      if (conversations.length > 0) {
+        // Create a lightweight version of conversations for storage
+        const conversationsToStore = conversations.map(conv => ({
+          ...conv,
+          messages: conv.messages.map(msg => {
+            const { imageUrl, videoUrl, baseImageUrls, ...rest } = msg;
+            return rest;
+          })
+        }));
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(conversationsToStore));
+      } else {
+        localStorage.removeItem(LOCAL_STORAGE_KEY);
+      }
     } catch (error) {
       console.error("Failed to save conversations to localStorage", error);
+       if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+            toast({
+                variant: 'destructive',
+                title: 'Fejl ved lagring',
+                description: 'Samtalehistorikken er for stor til at gemme lokalt. Prøv at slette nogle gamle samtaler.',
+            });
+        }
     }
-  }, [conversations]);
+  }, [conversations, toast]);
 
 
   const getUserInitials = (displayName: string | null | undefined): string => {
