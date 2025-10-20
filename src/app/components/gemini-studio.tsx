@@ -100,7 +100,7 @@ export function GeminiStudio({ }: GeminiStudioProps) {
     if (displayName.length > 1) {
       return displayName.substring(0, 2).toUpperCase();
     }
-    return 'U';
+    return displayName.toUpperCase();
   };
 
   const userInitials = getUserInitials(user?.displayName);
