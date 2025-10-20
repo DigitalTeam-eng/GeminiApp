@@ -176,23 +176,24 @@ const Sidebar = React.forwardRef<
     },
     ref
   ) => {
-    const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+    const { isMobile, state, openMobile, setOpenMobile, open } = useSidebar()
+    const finalCollapsible = isMobile ? 'offcanvas' : collapsible;
 
-    if (collapsible === "none") {
-      return (
-        <div
-          className={cn(
-            "flex h-full w-[--sidebar-width] flex-col bg-sidebar text-sidebar-foreground",
-            className
-          )}
-          ref={ref}
-          {...props}
-        >
-          {children}
-        </div>
-      )
+    if (finalCollapsible === 'none') {
+        return (
+            <div
+                className={cn(
+                    "flex h-full w-[--sidebar-width] flex-col bg-sidebar text-sidebar-foreground",
+                    className
+                )}
+                ref={ref}
+                {...props}
+            >
+                {children}
+            </div>
+        );
     }
-
+    
     if (isMobile) {
       return (
         <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
@@ -219,15 +220,15 @@ const Sidebar = React.forwardRef<
         className={cn(
           "group hidden md:flex md:flex-col text-sidebar-foreground",
           "duration-200 relative h-svh bg-sidebar transition-[width] ease-linear",
-          "group-data-[collapsible=offcanvas]:w-0",
-          "group-data-[side=right]:rotate-180",
+          "data-[collapsible=offcanvas]:w-0",
+          "data-[side=right]:rotate-180",
           variant === "floating" || variant === "inset"
-            ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
-            : "w-[--sidebar-width] group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l",
+            ? "p-2 data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
+            : "w-[--sidebar-width] data-[collapsible=icon]:w-[--sidebar-width-icon] data-[side=left]:border-r data-[side=right]:border-l",
           className
         )}
         data-state={state}
-        data-collapsible={state === "collapsed" ? collapsible : ""}
+        data-collapsible={state === "collapsed" ? finalCollapsible : ""}
         data-variant={variant}
         data-side={side}
         {...props}

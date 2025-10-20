@@ -316,7 +316,7 @@ export function GeminiStudio({ }: GeminiStudioProps) {
   return (
     <SidebarProvider>
       <div className="h-screen w-full flex">
-      <Sidebar side="left" variant="sidebar" collapsible="offcanvas">
+      <Sidebar side="left" variant="sidebar" collapsible="icon">
         <SidebarHeader>
             <div className="flex items-center gap-2">
                  <Image
@@ -325,6 +325,7 @@ export function GeminiStudio({ }: GeminiStudioProps) {
                     width={150}
                     height={37}
                     priority
+                    className="group-data-[collapsible=icon]:hidden"
                 />
                 <SidebarTrigger className="ml-auto" />
             </div>
@@ -332,10 +333,10 @@ export function GeminiStudio({ }: GeminiStudioProps) {
         <SidebarContent className="p-2 flex flex-col">
             <Button variant="outline" className='w-full justify-start' onClick={handleStartNewConversation}>
                 <Plus className="mr-2 h-4 w-4" />
-                Ny samtale
+                <span className="group-data-[collapsible=icon]:hidden">Ny samtale</span>
             </Button>
             <div className='flex-1 mt-4 overflow-y-auto'>
-                <p className='text-sm text-muted-foreground px-2'>Historik</p>
+                <p className='text-sm text-muted-foreground px-2 group-data-[collapsible=icon]:hidden'>Historik</p>
                 <SidebarMenu>
                     {conversations.map(conv => (
                         <SidebarMenuItem key={conv.id}>
@@ -355,7 +356,7 @@ export function GeminiStudio({ }: GeminiStudioProps) {
                                     isActive={conv.id === activeConversationId}
                                     onClick={() => handleSelectConversation(conv.id)}
                                 >
-                                    {conv.title}
+                                    <span className="group-data-[collapsible=icon]:hidden">{conv.title}</span>
                                 </SidebarMenuButton>
                             )}
                              <SidebarMenuAction showOnHover>
@@ -387,12 +388,12 @@ export function GeminiStudio({ }: GeminiStudioProps) {
                       <AvatarImage src={user?.photoURL ?? undefined} />
                       <AvatarFallback>{user?.displayName?.charAt(0) ?? 'U'}</AvatarFallback>
                   </Avatar>
-                  <div className="flex-1 overflow-hidden">
+                  <div className="flex-1 overflow-hidden group-data-[collapsible=icon]:hidden">
                       <p className="text-sm font-medium truncate">{user?.displayName}</p>
                       <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
                   </div>
                   {firebaseAuth.auth && (
-                    <Button variant="ghost" size="icon" onClick={() => firebaseAuth.auth && signOut(firebaseAuth.auth)}>
+                    <Button variant="ghost" size="icon" onClick={() => firebaseAuth.auth && signOut(firebaseAuth.auth)} className="group-data-[collapsible=icon]:ml-auto">
                         <LogOut className="h-4 w-4" />
                     </Button>
                   )}
@@ -402,7 +403,6 @@ export function GeminiStudio({ }: GeminiStudioProps) {
       <main className="flex flex-col flex-1">
          <div className='flex flex-col h-full bg-card'>
          <header className="flex items-center gap-4 p-4 border-b shrink-0">
-          <SidebarTrigger />
           <h1 className="text-xl font-bold">Gemini Studie</h1>
         </header>
         <div className='flex-1 overflow-y-auto'>
