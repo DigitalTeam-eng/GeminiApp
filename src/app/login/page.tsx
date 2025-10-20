@@ -6,11 +6,19 @@ import {
   signInWithPopup,
   OAuthProvider,
   signOut,
+  getAdditionalUserInfo,
 } from 'firebase/auth';
 import { useAuth } from '@/app/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import NextImage from 'next/image';
+import { jwtDecode } from 'jwt-decode';
+
+interface DecodedToken {
+  tid?: string;
+  [key: string]: any;
+}
+
 
 const MicrosoftIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -68,10 +76,21 @@ export default function LoginPage() {
 
     try {
       const result = await signInWithPopup(auth, provider);
+      
       const loggedInUser = result.user;
       const userEmail = loggedInUser.email;
-      const tenantId = loggedInUser.tenantId;
       const requiredDomain = '@sn.dk';
+
+      // Robust tenant ID validation via id_token
+      const additionalUserInfo = getAdditionalUserInfo(result);
+      const idToken = additionalUserInfo?.profile?.id_token;
+
+      if (!idToken) {
+          throw new Error("Kunne ikke verificere organisation. ID-token mangler.");
+      }
+
+      const decodedToken: DecodedToken = jwtDecode(idToken);
+      const tenantId = decodedToken.tid;
 
       // Post-login validation
       if (!userEmail || !userEmail.endsWith(requiredDomain)) {
