@@ -8,6 +8,9 @@ import { FirebaseClientProvider } from '@/firebase';
 export const metadata: Metadata = {
   title: 'Gemini App',
   description: 'Et interface til at interagere med Gemini AI-modeller.',
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({
