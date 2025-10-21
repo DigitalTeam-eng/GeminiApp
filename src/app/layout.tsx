@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   description: 'Et interface til at interagere med Gemini AI-modeller.',
   icons: {
     icon: '/gemini.png',
+    apple: '/gemini.png',
   },
 };
 
