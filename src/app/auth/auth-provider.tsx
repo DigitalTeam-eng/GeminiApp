@@ -7,7 +7,7 @@ import {
 } from 'react';
 import { User, signOut, Auth } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import { useFirebase } from '@/firebase';
+import { useUser, useAuth as useFirebaseAuth } from '@/firebase/provider';
 
 interface AuthContextType {
   user: User | null;
@@ -26,7 +26,8 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const { user, isUserLoading, auth, firebaseApp, firestore } = useFirebase(); 
+  const { user, isUserLoading } = useUser();
+  const auth = useFirebaseAuth();
   const router = useRouter();
 
   const handleSignOut = async () => {
@@ -42,8 +43,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       logout: handleSignOut,
       signOut: handleSignOut,
       auth, 
-      firebaseApp, 
-      firestore 
   };
 
 
@@ -55,7 +54,3 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 };
 
 export const useAuth = () => useContext(AuthContext);
-
-    
-
-    
