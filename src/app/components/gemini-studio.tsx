@@ -150,7 +150,7 @@ export function GeminiStudio({ }: GeminiStudioProps) {
         behavior: 'smooth',
       });
     }
-  }, [activeConversation?.messages]);
+  }, [activeConversation?.messages, activeConversationId]);
 
    const handleNewConversation = useCallback(async (prompt: string, initialMessage?: Message): Promise<Conversation | null> => {
     if (!prompt.trim() && (!initialMessage?.baseImageUrls || initialMessage.baseImageUrls.length === 0)) return null;
@@ -322,8 +322,8 @@ export function GeminiStudio({ }: GeminiStudioProps) {
         
         const result = await generateResponse({ prompt: prompt || '', baseImageDataUris: [...new Set(baseImageDataUris)], history });
 
-        if (result.error) {
-            throw new Error(result.error);
+        if (!result || result.error) {
+            throw new Error(result?.error || 'Der opstod en uventet fejl.');
         }
 
         let assistantMessage: Message;
@@ -562,6 +562,8 @@ export function GeminiStudio({ }: GeminiStudioProps) {
 
 // Minimal props interface
 interface GeminiStudioProps {}
+    
+
     
 
     

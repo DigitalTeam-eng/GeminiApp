@@ -36,8 +36,7 @@ export function VideoDisplay({ src, prompt, model }: VideoDisplayProps) {
             autoPlay
             loop
             muted
-            className="rounded-lg max-w-full"
-            style={{ maxWidth: '512px' }}
+            className="rounded-lg max-w-full w-full"
           />
           <Button
             onClick={handleDownload}
@@ -58,3 +57,5 @@ export function VideoDisplay({ src, prompt, model }: VideoDisplayProps) {
     </div>
   );
 }
+
+    
